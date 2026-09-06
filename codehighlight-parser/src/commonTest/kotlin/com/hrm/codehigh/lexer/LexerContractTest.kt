@@ -41,6 +41,17 @@ class LexerContractTest {
     }
 
     @Test
+    fun should_notExtend_when_prefixedTripleQuoteClosed() {
+        assertFalse(PythonLexer.isExtendableToken(CodeToken(TokenType.STRING, 0 until 8, "f\"\"\"x\"\"\"")))
+    }
+
+    @Test
+    fun should_extend_when_prefixedTripleQuoteOpener() {
+        assertTrue(PythonLexer.isExtendableToken(CodeToken(TokenType.STRING, 0 until 4, "f\"\"\"")))
+        assertTrue(PythonLexer.isExtendableToken(CodeToken(TokenType.STRING, 0 until 9, "f\"\"\"abc\"\"")))
+    }
+
+    @Test
     fun should_extend_when_unclosedPrefixedString() {
         val tokens = PythonLexer.tokenize("x = f\"abc")
         assertTrue(PythonLexer.isExtendableToken(tokens.last { it.type == TokenType.STRING }))

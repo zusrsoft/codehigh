@@ -32,7 +32,7 @@ internal object KotlinLexer : BaseLexer() {
     private val threeCharOps = setOf("..<")
     private val twoCharOps = setOf(
         "==", "!=", "<=", ">=", "&&", "||", "++", "--", "+=", "-=", "*=", "/=",
-        "%=", "->", "=>", "::", "?.", ".."
+        "%=", "->", "=>", "::", "?.", "..", "?:"
     )
 
     override fun tokenize(code: String): List<CodeToken> {

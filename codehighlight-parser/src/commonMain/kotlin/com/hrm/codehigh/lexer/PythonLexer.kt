@@ -31,8 +31,12 @@ internal object PythonLexer : BaseLexer() {
 
     private val stringPrefixes = setOf("r", "b", "u", "f", "rb", "br", "rf", "fr")
 
-    /** 返回 [pos] 起合法字符串前缀长度（后随引号才算），否则 0 */
+    /** 返回 [pos] 起合法字符串前缀长度（后随引号才算），否则 0。仅前缀候选字母进入子串匹配（最长优先） */
     private fun stringPrefixLengthAt(code: String, pos: Int): Int {
+        when (code[pos]) {
+            'f', 'F', 'r', 'R', 'b', 'B', 'u', 'U' -> Unit
+            else -> return 0
+        }
         for (len in 2 downTo 1) {
             if (pos + len >= code.length) continue
             if (code.substring(pos, pos + len).lowercase() in stringPrefixes) {
@@ -79,11 +83,11 @@ internal object PythonLexer : BaseLexer() {
                 val start = pos
                 pos += 3
                 while (pos + 2 < code.length && !(code[pos] == '"' && code[pos + 1] == '"' && code[pos + 2] == '"')) pos++
-            if (pos + 2 < code.length) {
-                pos += 3
-            } else {
-                pos = code.length
-            }
+                if (pos + 2 < code.length) {
+                    pos += 3
+                } else {
+                    pos = code.length
+                }
                 tokens.add(CodeToken(TokenType.STRING, start until pos, code))
                 continue
             }
@@ -93,11 +97,11 @@ internal object PythonLexer : BaseLexer() {
                 val start = pos
                 pos += 3
                 while (pos + 2 < code.length && !(code[pos] == '\'' && code[pos + 1] == '\'' && code[pos + 2] == '\'')) pos++
-            if (pos + 2 < code.length) {
-                pos += 3
-            } else {
-                pos = code.length
-            }
+                if (pos + 2 < code.length) {
+                    pos += 3
+                } else {
+                    pos = code.length
+                }
                 tokens.add(CodeToken(TokenType.STRING, start until pos, code))
                 continue
             }
@@ -239,10 +243,16 @@ internal object PythonLexer : BaseLexer() {
         if (token.type != TokenType.STRING) return super.isExtendableToken(token)
         val t = token.text
         if (t.length >= 2 && t[0] != '"' && t[0] != '\'' && t[0] != '`') {
-            // 带前缀字符串（f/r/b/u 及组合）：按前缀后的引号判定
+            // 带前缀字符串（f/r/b/u 及组合）：剥离前缀后按引号形态判定
             val q = t.indexOfFirst { it == '"' || it == '\'' }
             if (q in 1..2) {
-                return if (t.length > q + 1) t.last() != t[q] else true
+                val closer = t[q]
+                val isTriple = t.length >= q + 3 && t[q + 1] == closer && t[q + 2] == closer
+                if (isTriple) {
+                    // 与基类同构：余段短于空三引号形态（6）必为未闭合 opener
+                    return t.length < q + 6 || !t.endsWith("$closer$closer$closer")
+                }
+                return if (t.length > q + 1) t.last() != closer else true
             }
         }
         return super.isExtendableToken(token)
