@@ -23,4 +23,8 @@ internal object LuaLexer : BaseLexer() {
     )
 
     override fun tokenize(code: String): List<CodeToken> = tokenizeWithSpec(code, spec)
+
+    // 长字符串 [[...]] 与块注释 --[[...]] 走 spec 定界符判定，其余回退默认实现
+    override fun isExtendableToken(token: CodeToken): Boolean =
+        isExtendableTokenWithSpec(token, spec) ?: super.isExtendableToken(token)
 }

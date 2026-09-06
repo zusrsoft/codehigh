@@ -21,7 +21,17 @@ internal data class ConfigurableLexerSpec(
     val extraWordChars: Set<Char> = emptySet(),
     val operators: Set<String> = emptySet(),
     val punctuation: Set<Char> = setOf('{', '}', '(', ')', '[', ']', ';', ',', '.', ':')
-)
+) {
+    // 匹配表预排序惰性缓存：同一 spec 的重复 tokenize 不再重排
+    //（sortedByDescending 为稳定排序，与每次现排结果一致）
+    val sortedFixedTokens: List<String> by lazy { fixedTokens.keys.sortedByDescending { it.length } }
+    val sortedVariablePrefixes: List<String> by lazy { variablePrefixes.sortedByDescending { it.length } }
+    val sortedLineComments: List<String> by lazy { lineComments.sortedByDescending { it.length } }
+    val sortedBlockComments: List<Pair<String, String>> by lazy { blockComments.sortedByDescending { it.first.length } }
+    val sortedBlockStrings: List<Pair<String, String>> by lazy { blockStrings.sortedByDescending { it.first.length } }
+    val sortedTripleStrings: List<String> by lazy { tripleStrings.sortedByDescending { it.length } }
+    val sortedOperators: List<String> by lazy { operators.sortedByDescending { it.length } }
+}
 
 internal fun tokenizeWithSpec(code: String, spec: ConfigurableLexerSpec): List<CodeToken> {
     if (code.isEmpty()) return emptyList()
@@ -29,13 +39,13 @@ internal fun tokenizeWithSpec(code: String, spec: ConfigurableLexerSpec): List<C
     val tokens = mutableListOf<CodeToken>()
     var pos = 0
 
-    val fixedTokens = spec.fixedTokens.keys.sortedByDescending { it.length }
-    val variablePrefixes = spec.variablePrefixes.sortedByDescending { it.length }
-    val lineComments = spec.lineComments.sortedByDescending { it.length }
-    val blockComments = spec.blockComments.sortedByDescending { it.first.length }
-    val blockStrings = spec.blockStrings.sortedByDescending { it.first.length }
-    val tripleStrings = spec.tripleStrings.sortedByDescending { it.length }
-    val operators = spec.operators.sortedByDescending { it.length }
+    val fixedTokens = spec.sortedFixedTokens
+    val variablePrefixes = spec.sortedVariablePrefixes
+    val lineComments = spec.sortedLineComments
+    val blockComments = spec.sortedBlockComments
+    val blockStrings = spec.sortedBlockStrings
+    val tripleStrings = spec.sortedTripleStrings
+    val operators = spec.sortedOperators
 
     val keywords = normalizeWords(spec.keywords, spec.caseInsensitiveWords)
     val builtins = normalizeWords(spec.builtins, spec.caseInsensitiveWords)
@@ -207,6 +217,26 @@ internal fun tokenizeWithSpec(code: String, spec: ConfigurableLexerSpec): List<C
     }
 
     return tokens
+}
+
+/**
+ * 基于 spec 块定界符（块注释/块字符串）判定 Token 是否可扩展（未闭合）。
+ * Token 未命中任何定界符起始前缀时返回 null，调用方回退 Lexer 默认实现。
+ * 闭合判定与 tokenizeWithSpec 的 findDelimitedEnd 语义对齐：
+ * 短于「起始+结束定界符」长度总和的形态必为未闭合 opener。
+ */
+internal fun isExtendableTokenWithSpec(token: CodeToken, spec: ConfigurableLexerSpec): Boolean? {
+    val text = token.text
+    return when (token.type) {
+        TokenType.COMMENT -> extendableDelimited(text, spec.sortedBlockComments)
+        TokenType.STRING -> extendableDelimited(text, spec.sortedBlockStrings)
+        else -> null
+    }
+}
+
+private fun extendableDelimited(text: String, pairs: List<Pair<String, String>>): Boolean? {
+    val pair = pairs.firstOrNull { text.startsWith(it.first) } ?: return null
+    return text.length < pair.first.length + pair.second.length || !text.endsWith(pair.second)
 }
 
 private fun normalizeWords(words: Set<String>, caseInsensitive: Boolean): Set<String> {

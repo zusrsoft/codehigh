@@ -64,6 +64,49 @@ class LexerContractTest {
     }
 
     @Test
+    fun should_extend_when_luaUnclosedLongString() {
+        assertTrue(LuaLexer.isExtendableToken(CodeToken(TokenType.STRING, 0 until 5, "[[abc")))
+        assertTrue(LuaLexer.isExtendableToken(CodeToken(TokenType.STRING, 0 until 2, "[[")))
+    }
+
+    @Test
+    fun should_notExtend_when_luaClosedLongString() {
+        assertFalse(LuaLexer.isExtendableToken(CodeToken(TokenType.STRING, 0 until 4, "[[]]")))
+        assertFalse(LuaLexer.isExtendableToken(CodeToken(TokenType.STRING, 0 until 7, "[[abc]]")))
+    }
+
+    @Test
+    fun should_extend_when_luaUnclosedBlockComment() {
+        val tokens = LuaLexer.tokenize("--[[ unclosed")
+        assertTrue(LuaLexer.isExtendableToken(tokens.last { it.type == TokenType.COMMENT }))
+    }
+
+    @Test
+    fun should_notExtend_when_luaClosedBlockComment() {
+        val tokens = LuaLexer.tokenize("--[[ closed ]]")
+        assertFalse(LuaLexer.isExtendableToken(tokens.last { it.type == TokenType.COMMENT }))
+    }
+
+    @Test
+    fun should_extend_when_haskellUnclosedBlockComment() {
+        assertTrue(HaskellLexer.isExtendableToken(CodeToken(TokenType.COMMENT, 0 until 6, "{- abc")))
+        assertTrue(HaskellLexer.isExtendableToken(CodeToken(TokenType.COMMENT, 0 until 2, "{-")))
+        assertTrue(HaskellLexer.isExtendableToken(CodeToken(TokenType.COMMENT, 0 until 3, "{-}")))
+    }
+
+    @Test
+    fun should_notExtend_when_haskellClosedBlockComment() {
+        assertFalse(HaskellLexer.isExtendableToken(CodeToken(TokenType.COMMENT, 0 until 9, "{- abc -}")))
+        assertFalse(HaskellLexer.isExtendableToken(CodeToken(TokenType.COMMENT, 0 until 4, "{--}")))
+    }
+
+    @Test
+    fun should_notExtend_when_haskellLineComment() {
+        val tokens = HaskellLexer.tokenize("-- line comment")
+        assertFalse(HaskellLexer.isExtendableToken(tokens.last { it.type == TokenType.COMMENT }))
+    }
+
+    @Test
     fun should_tokenizeNestedComment_when_kotlinBlockComment() {
         val tokens = KotlinLexer.tokenize("/* a /* b */ c */ val x = 1")
         assertEquals(1, tokens.count { it.type == TokenType.COMMENT })
