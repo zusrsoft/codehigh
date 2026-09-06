@@ -107,6 +107,18 @@ class LexerContractTest {
     }
 
     @Test
+    fun should_extend_when_unclosedRubyBeginBlock() {
+        val tokens = RubyLexer.tokenize("=begin\nsome doc")
+        assertTrue(RubyLexer.isExtendableToken(tokens.first { it.type == TokenType.COMMENT }))
+    }
+
+    @Test
+    fun should_notExtend_when_closedRubyBeginBlock() {
+        val tokens = RubyLexer.tokenize("=begin\ndoc\n=end\nx = 1")
+        assertFalse(RubyLexer.isExtendableToken(tokens.first { it.type == TokenType.COMMENT }))
+    }
+
+    @Test
     fun should_tokenizeNestedComment_when_kotlinBlockComment() {
         val tokens = KotlinLexer.tokenize("/* a /* b */ c */ val x = 1")
         assertEquals(1, tokens.count { it.type == TokenType.COMMENT })

@@ -25,4 +25,8 @@ internal object RubyLexer : BaseLexer() {
     )
 
     override fun tokenize(code: String): List<CodeToken> = tokenizeWithSpec(code, spec)
+
+    // 块注释 =begin...=end 走 spec 定界符判定，其余回退默认实现
+    override fun isExtendableToken(token: CodeToken): Boolean =
+        isExtendableTokenWithSpec(token, spec) ?: super.isExtendableToken(token)
 }
