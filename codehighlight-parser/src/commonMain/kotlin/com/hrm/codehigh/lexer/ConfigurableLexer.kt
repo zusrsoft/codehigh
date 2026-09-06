@@ -195,6 +195,13 @@ internal fun tokenizeWithSpec(code: String, spec: ConfigurableLexerSpec): List<C
             continue
         }
 
+        // 其他字符：连续空白合并为单个 PLAIN，其余逐字符兜底
+        if (current.isWhitespace()) {
+            val start = pos
+            while (pos < code.length && code[pos].isWhitespace()) pos++
+            tokens.add(CodeToken(TokenType.PLAIN, start until pos, code))
+            continue
+        }
         tokens.add(CodeToken(TokenType.PLAIN, pos until pos + 1, code))
         pos++
     }

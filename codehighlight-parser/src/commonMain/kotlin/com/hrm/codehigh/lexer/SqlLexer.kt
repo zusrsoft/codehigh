@@ -173,7 +173,13 @@ internal object SqlLexer : BaseLexer() {
                 continue
             }
 
-            // 其他字符
+            // 其他字符：连续空白合并为单个 PLAIN，其余逐字符兜底
+            if (c.isWhitespace()) {
+                val start = pos
+                pos = whitespaceEnd(code, pos)
+                tokens.add(CodeToken(TokenType.PLAIN, start until pos, code))
+                continue
+            }
             tokens.add(CodeToken(TokenType.PLAIN, pos until pos + 1, code))
             pos++
         }

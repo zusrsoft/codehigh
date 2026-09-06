@@ -22,11 +22,10 @@ internal object JsonLexer : BaseLexer() {
                 val start = pos
                 pos++
                 while (pos < code.length && code[pos] != '"') {
-                    if (code[pos] == '\\') pos++
+                    if (code[pos] == '\\' && pos + 1 < code.length) pos++
                     pos++
                 }
                 if (pos < code.length && code[pos] == '"') pos++
-                val text = code.substring(start, pos)
                 // 判断是键还是值：跳过空白后看是否有冒号
                 var lookAhead = pos
                 while (lookAhead < code.length && code[lookAhead].isWhitespace()) lookAhead++
@@ -73,7 +72,13 @@ internal object JsonLexer : BaseLexer() {
                 continue
             }
 
-            // 其他字符（空白等）
+            // 其他字符：连续空白合并为单个 PLAIN，其余逐字符兜底
+            if (c.isWhitespace()) {
+                val start = pos
+                pos = whitespaceEnd(code, pos)
+                tokens.add(CodeToken(TokenType.PLAIN, start until pos, code))
+                continue
+            }
             tokens.add(CodeToken(TokenType.PLAIN, pos until pos + 1, code))
             pos++
         }
