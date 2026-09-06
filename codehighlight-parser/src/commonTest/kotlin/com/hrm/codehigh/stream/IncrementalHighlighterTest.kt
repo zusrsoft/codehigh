@@ -143,4 +143,95 @@ class IncrementalHighlighterTest {
         assertEquals(ast1.source, ast2.source)
         assertEquals(ast1.language, ast2.language)
     }
+
+    @Test
+    fun should_notTreatDirtySubstringStartAsLineStart_when_yamlIncremental() {
+        val highlighter = IncrementalHighlighter()
+        highlighter.update("a--", "yaml")
+        val ast = highlighter.update("a---", "yaml")
+        // 行首敏感的 --- 文档分隔符判定必须使用全文上下文，dirty 子串起始处不是行首
+        assertTrue(
+            ast.tokens.none { it.type == TokenType.KEYWORD && it.text == "---" },
+            "增量重解析不应把子串起点误判为行首：tokens=${ast.tokens}"
+        )
+    }
+
+    @Test
+    fun should_notTreatDirtySubstringStartAsLineStart_when_yamlAppendsDocSeparatorMidLine() {
+        val highlighter = IncrementalHighlighter()
+        highlighter.update("a -", "yaml")
+        val ast = highlighter.update("a ---", "yaml")
+        // dirty 子串 "---" 的全文位置在 "a " 之后，不是行首，不应识别为文档分隔符
+        assertTrue(
+            ast.tokens.none { it.type == TokenType.KEYWORD && it.text == "---" },
+            "非行首的 --- 不应因增量重解析被误判为文档分隔符：tokens=${ast.tokens}"
+        )
+    }
+
+    @Test
+    fun should_notTreatDirtySubstringStartAsLineStart_when_reparseOffsetExceedsDirtyLength() {
+        val highlighter = IncrementalHighlighter()
+        highlighter.update("key: -", "yaml")
+        val ast = highlighter.update("key: ---", "yaml")
+        // startOffset(5) 大于 dirty 子串长度(3)时行首判定不得越界，且非行首 --- 不是分隔符
+        assertTrue(
+            ast.tokens.none { it.type == TokenType.KEYWORD && it.text == "---" },
+            "子串索引越界或误判文档分隔符：tokens=${ast.tokens}"
+        )
+    }
+
+    @Test
+    fun should_recognizeDocSeparator_when_yamlAppendedAtRealLineStart() {
+        val highlighter = IncrementalHighlighter()
+        highlighter.update("k: v\n", "yaml")
+        val ast = highlighter.update("k: v\n---", "yaml")
+        // 全文中 --- 前是 \n，是真正的行首，增量结果应与全量一致：识别为文档分隔符
+        assertTrue(
+            ast.tokens.any { it.type == TokenType.KEYWORD && it.text == "---" },
+            "真行首的 --- 应识别为文档分隔符：tokens=${ast.tokens}"
+        )
+    }
+
+    @Test
+    fun should_tokenizeTildeAsBuiltinNull_when_yaml() {
+        val highlighter = IncrementalHighlighter()
+        val ast = highlighter.update("k: ~", "yaml")
+        // nullValues 含 ~，此前落入逐字符 PLAIN 兜底（死配置），应命中 BUILTIN
+        assertTrue(
+            ast.tokens.any { it.type == TokenType.BUILTIN && it.text == "~" },
+            "~ 应识别为 null 值 BUILTIN：tokens=${ast.tokens}"
+        )
+    }
+
+    @Test
+    fun should_returnNoChange_when_cacheHit() {
+        val highlighter = IncrementalHighlighter()
+        highlighter.update("fun a() {}", "kotlin")
+        val result = highlighter.updateDetailed("fun a() {}", "kotlin")
+        assertEquals(-1, result.firstChangedLine)
+        assertEquals(-1, result.reparseStart)
+    }
+
+    @Test
+    fun should_reparseFromUnfinishedTokenStart_when_lookbackExceeded() {
+        val highlighter = IncrementalHighlighter()
+        // 前置内容 + 超过 64 字符回看窗口的未闭合注释（注释起点 11，非 0）
+        val prefix = "val a = 1\n"
+        val longComment = prefix + "/* " + "x".repeat(200)
+        highlighter.update(longComment, "kotlin")
+        val result = highlighter.updateDetailed(longComment + "\n*/\nval x = 1", "kotlin")
+        assertEquals(prefix.length, result.reparseStart, "未闭合注释应从其起点重解析而非全量回退到 0")
+        assertEquals(1, result.firstChangedLine)
+        assertTrue(result.ast.tokens.any { it.type == TokenType.COMMENT && it.text.contains("*/") })
+    }
+
+    @Test
+    fun should_fullReparse_when_codeEditedNotAppended() {
+        val highlighter = IncrementalHighlighter()
+        highlighter.update("fun a() {}", "kotlin")
+        val result = highlighter.updateDetailed("fun b() {}", "kotlin")
+        assertEquals(0, result.firstChangedLine)
+        assertEquals(0, result.reparseStart)
+        assertEquals("fun b() {}", result.ast.source)
+    }
 }

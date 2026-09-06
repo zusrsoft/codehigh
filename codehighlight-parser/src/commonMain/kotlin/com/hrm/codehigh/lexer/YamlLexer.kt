@@ -12,7 +12,9 @@ internal object YamlLexer : BaseLexer() {
     private val boolValues = setOf("true", "false", "yes", "no", "on", "off", "True", "False", "Yes", "No", "On", "Off", "TRUE", "FALSE", "YES", "NO", "ON", "OFF")
     private val nullValues = setOf("null", "~", "Null", "NULL")
 
-    override fun tokenize(code: String): List<CodeToken> {
+    override fun tokenize(code: String): List<CodeToken> = tokenize(code, 0)
+
+    override fun tokenize(code: String, startOffset: Int): List<CodeToken> {
         if (code.isEmpty()) return emptyList()
         val tokens = mutableListOf<CodeToken>()
         var pos = 0
@@ -21,8 +23,11 @@ internal object YamlLexer : BaseLexer() {
             val c = code[pos]
 
             // 文档分隔符 --- 或 ...
+            // startOffset + pos 是全文位置；全文前一字符在子串中的 index 恰为 pos - 1。
+            // pos == 0 且 startOffset > 0 时前一字符不在子串内，保守视为非行首
+            //（引擎的回退机制保证真正的行首 \n 会被纳入 dirty 区域或回退到 0）。
             if ((code.startsWith("---", pos) || code.startsWith("...", pos)) &&
-                (pos == 0 || code[pos - 1] == '\n')) {
+                (startOffset + pos == 0 || (pos > 0 && code[pos - 1] == '\n'))) {
                 val start = pos
                 pos += 3
                 tokens.add(CodeToken(TokenType.KEYWORD, start until pos, code))
@@ -133,6 +138,13 @@ internal object YamlLexer : BaseLexer() {
             // 结构符号
             if (c in "{}[]|>:,-") {
                 tokens.add(CodeToken(TokenType.PUNCTUATION, pos until pos + 1, code))
+                pos++
+                continue
+            }
+
+            // null 值 ~
+            if (c == '~') {
+                tokens.add(CodeToken(TokenType.BUILTIN, pos until pos + 1, code))
                 pos++
                 continue
             }
