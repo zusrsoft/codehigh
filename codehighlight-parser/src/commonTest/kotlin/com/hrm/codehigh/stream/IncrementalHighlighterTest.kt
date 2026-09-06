@@ -1,8 +1,10 @@
 package com.hrm.codehigh.stream
 
 import com.hrm.codehigh.ast.TokenType
+import com.hrm.codehigh.lexer.YamlLexer
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -210,6 +212,7 @@ class IncrementalHighlighterTest {
         val result = highlighter.updateDetailed("fun a() {}", "kotlin")
         assertEquals(-1, result.firstChangedLine)
         assertEquals(-1, result.reparseStart)
+        assertFalse(result.hasChange)
     }
 
     @Test
@@ -233,5 +236,55 @@ class IncrementalHighlighterTest {
         assertEquals(0, result.firstChangedLine)
         assertEquals(0, result.reparseStart)
         assertEquals("fun b() {}", result.ast.source)
+        assertTrue(result.hasChange)
+    }
+
+    @Test
+    fun should_recognizeDocSeparator_when_yamlStreamedCharByCharAtLineStart() {
+        val highlighter = IncrementalHighlighter()
+        // 逐字符流式构建第二行的 ---
+        var code = "a\n"
+        highlighter.update(code, "yaml")
+        for (ch in listOf("-", "-", "-")) {
+            code += ch
+            val ast = highlighter.update(code, "yaml")
+            assertEquals(code, ast.tokens.joinToString("") { it.text }, "len=${code.length}")
+        }
+        // 最终态：增量结果与全量词法一致
+        val incremental = highlighter.update("a\n---", "yaml")
+        val reference = IncrementalHighlighter().update("a\n---", "yaml")
+        assertEquals(
+            reference.tokens.joinToString("|") { "${it.type}:${it.text}" },
+            incremental.tokens.joinToString("|") { "${it.type}:${it.text}" },
+        )
+        // 词法器直测：全量 a\n--- 中 --- 是行首文档分隔符
+        assertTrue(
+            YamlLexer.tokenize("a\n---").any { it.type == TokenType.KEYWORD && it.text == "---" },
+        )
+    }
+
+    @Test
+    fun should_recognizeDocSeparator_when_yamlJumpAppendAtLineStart() {
+        val highlighter = IncrementalHighlighter()
+        highlighter.update("a\n-", "yaml")
+        val ast = highlighter.update("a\n----", "yaml")
+        // 增量与全量词法一致：--- 分隔符 + 多余 -
+        val full = IncrementalHighlighter().update("a\n----", "yaml")
+        assertEquals(
+            full.tokens.joinToString("|") { "${it.type}:${it.text}" },
+            ast.tokens.joinToString("|") { "${it.type}:${it.text}" },
+        )
+    }
+
+    @Test
+    fun should_keepLineStartContext_when_reparseStartAtTrueLineStart() {
+        val highlighter = IncrementalHighlighter()
+        highlighter.update("k: v\n", "yaml")
+        val ast = highlighter.update("k: v\nrest: 1", "yaml")
+        val full = IncrementalHighlighter().update("k: v\nrest: 1", "yaml")
+        assertEquals(
+            full.tokens.joinToString("|") { "${it.type}:${it.text}" },
+            ast.tokens.joinToString("|") { "${it.type}:${it.text}" },
+        )
     }
 }

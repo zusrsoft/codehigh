@@ -14,6 +14,13 @@ internal object YamlLexer : BaseLexer() {
 
     override fun tokenize(code: String): List<CodeToken> = tokenize(code, 0)
 
+    override fun isExtendableToken(token: CodeToken): Boolean {
+        // 行首的连续 - 或 . 可在追加中合并为 --- / ... 文档分隔符
+        if (token.text == "-" && token.type == TokenType.PUNCTUATION) return true
+        if (token.text == "." && token.type == TokenType.PLAIN) return true
+        return super.isExtendableToken(token)
+    }
+
     override fun tokenize(code: String, startOffset: Int): List<CodeToken> {
         if (code.isEmpty()) return emptyList()
         val tokens = mutableListOf<CodeToken>()

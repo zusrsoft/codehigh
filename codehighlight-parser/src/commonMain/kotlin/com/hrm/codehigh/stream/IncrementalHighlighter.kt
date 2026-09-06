@@ -2,6 +2,7 @@ package com.hrm.codehigh.stream
 
 import com.hrm.codehigh.ast.CodeAst
 import com.hrm.codehigh.ast.CodeToken
+import com.hrm.codehigh.ast.TokenType
 import com.hrm.codehigh.lexer.LanguageRegistry
 
 /**
@@ -22,7 +23,10 @@ class IncrementalHighlighter {
         val firstChangedLine: Int,
         /** 重解析起点；-1 表示本次无变化（缓存命中） */
         val reparseStart: Int,
-    )
+    ) {
+        /** 本次更新是否产生变化（缓存命中时 false） */
+        val hasChange: Boolean get() = firstChangedLine >= 0
+    }
 
     private companion object {
         private const val CONTEXT_LOOKBACK_CHARS = 64
@@ -67,8 +71,9 @@ class IncrementalHighlighter {
         val appendedStart = oldAst.source.length
         val reparseStart = determineReparseStart(oldAst, appendedStart)
         val lexer = LanguageRegistry.getOrPlain(language)
-        // 按稳定 Token 数取前缀视图，O(1) 无拷贝
-        val stableCount = oldAst.tokens.count { it.range.last < reparseStart }
+        // 按稳定 Token 数取前缀视图，O(1) 无拷贝；Token 有序，首个非稳定索引即稳定数
+        val stableCount = oldAst.tokens.indexOfFirst { it.range.last >= reparseStart }
+            .let { if (it < 0) oldAst.tokens.size else it }
         val stable = oldAst.tokens.subList(0, stableCount)
 
         // startOffset 让词法器以全文视角判断行首等上下文；返回 range 仍相对子串
@@ -96,17 +101,34 @@ class IncrementalHighlighter {
         if (appendedStart == 0) return 0
         val lexer = LanguageRegistry.getOrPlain(oldAst.language)
 
-        // 未闭合多行结构：只检查"结束位置落在窗口内"的 Token（未闭合结构必延伸到
-        // 文末或行尾，其 Token 起点可远在窗口之外——长注释/长字符串场景），
-        // 从其起点重解析，避免每次追加全量回退
-        val unfinishedTokenStart = oldAst.tokens
-            .asReversed()
-            .firstOrNull {
-                it.range.last >= appendedStart - CONTEXT_LOOKBACK_CHARS &&
-                    lexer.isExtendableToken(it)
+        // 窗口：只考察结束位置落在窗口内的 Token（未闭合结构必延伸到文末/行尾），
+        // 从尾部反向定位首个窗口外 Token，避免全列表扫描
+        val windowStart = (appendedStart - CONTEXT_LOOKBACK_CHARS).coerceAtLeast(0)
+        var firstWindowIdx = oldAst.tokens.size
+        for (i in oldAst.tokens.indices.reversed()) {
+            if (oldAst.tokens[i].range.last < windowStart) break
+            firstWindowIdx = i
+        }
+
+        // 最后一个"连续可扩展 Token 游程"的最早起点：
+        // 单个未闭合长结构（注释/三引号）起点可远在窗口外，需整游程回退；
+        // 连续可合并序列（如 ---- 中相邻的多个 -）需回退到游程首
+        var runStart: Int? = null
+        var runStartIsDelimited = false
+        var prevEnd = -2
+        for (i in firstWindowIdx until oldAst.tokens.size) {
+            val t = oldAst.tokens[i]
+            if (lexer.isExtendableToken(t)) {
+                if (runStart == null || t.range.first != prevEnd + 1) {
+                    runStart = t.range.first
+                    runStartIsDelimited = t.type == TokenType.COMMENT || t.type == TokenType.STRING
+                }
+            } else {
+                runStart = null
+                runStartIsDelimited = false
             }
-            ?.range
-            ?.first
+            prevEnd = t.range.last
+        }
 
         // 邻近 Token 回退：吸收因追加而尾段变化的最后一个短 Token
         val nearbyTokenStart = oldAst.tokens
@@ -114,7 +136,24 @@ class IncrementalHighlighter {
             ?.range
             ?.first
 
-        return unfinishedTokenStart ?: nearbyTokenStart ?: 0
+        val candidate = runStart ?: nearbyTokenStart ?: 0
+        return retreatToLineContext(oldAst, candidate, fromDelimitedStructure = runStart != null && runStartIsDelimited)
+    }
+
+    /**
+     * 重解析起点恰在真行首时（前一字符为 \n），把包含该 \n 的 Token 纳入脏区，
+     * 让词法器在子串内回看一行首（YamlLexer 等按前一字符判行首）。
+     * 回退目标保持 Token 边界，维持"从 Token 边界重解析"的不变式。
+     *
+     * 例外：未闭合定界结构（注释/字符串）的识别由定界符前缀驱动、不依赖行首
+     * 上下文，从结构自身起点重解析即可，不回退。
+     */
+    private fun retreatToLineContext(oldAst: CodeAst, reparseStart: Int, fromDelimitedStructure: Boolean): Int {
+        if (reparseStart <= 0 || fromDelimitedStructure) return reparseStart
+        if (oldAst.source[reparseStart - 1] != '\n') return reparseStart
+        return oldAst.tokens
+            .lastOrNull { it.range.first < reparseStart && it.range.last >= reparseStart - 1 }
+            ?.range?.first ?: reparseStart
     }
 
     /** 清除缓存，强制下次全量解析 */
