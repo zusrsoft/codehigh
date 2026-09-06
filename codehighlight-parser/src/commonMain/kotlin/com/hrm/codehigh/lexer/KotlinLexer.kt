@@ -41,7 +41,7 @@ internal object KotlinLexer : BaseLexer() {
             if (pos + 1 < code.length && code[pos] == '/' && code[pos + 1] == '/') {
                 val start = pos
                 while (pos < code.length && code[pos] != '\n') pos++
-                tokens.add(CodeToken(TokenType.COMMENT, code.substring(start, pos), start until pos))
+                tokens.add(CodeToken(TokenType.COMMENT, start until pos, code))
                 continue
             }
 
@@ -55,7 +55,7 @@ internal object KotlinLexer : BaseLexer() {
                 } else {
                     pos = code.length
                 }
-                tokens.add(CodeToken(TokenType.COMMENT, code.substring(start, pos), start until pos))
+                tokens.add(CodeToken(TokenType.COMMENT, start until pos, code))
                 continue
             }
 
@@ -64,7 +64,7 @@ internal object KotlinLexer : BaseLexer() {
                 val start = pos
                 pos++
                 while (pos < code.length && (code[pos].isLetterOrDigit() || code[pos] == '_')) pos++
-                tokens.add(CodeToken(TokenType.ANNOTATION, code.substring(start, pos), start until pos))
+                tokens.add(CodeToken(TokenType.ANNOTATION, start until pos, code))
                 continue
             }
 
@@ -78,7 +78,7 @@ internal object KotlinLexer : BaseLexer() {
                 } else {
                     pos = code.length
                 }
-                tokens.add(CodeToken(TokenType.STRING, code.substring(start, pos), start until pos))
+                tokens.add(CodeToken(TokenType.STRING, start until pos, code))
                 continue
             }
 
@@ -91,7 +91,7 @@ internal object KotlinLexer : BaseLexer() {
                     pos++
                 }
                 if (pos < code.length && code[pos] == '"') pos++
-                tokens.add(CodeToken(TokenType.STRING, code.substring(start, pos), start until pos))
+                tokens.add(CodeToken(TokenType.STRING, start until pos, code))
                 continue
             }
 
@@ -104,7 +104,7 @@ internal object KotlinLexer : BaseLexer() {
                     pos++
                 }
                 if (pos < code.length && code[pos] == '\'') pos++
-                tokens.add(CodeToken(TokenType.STRING, code.substring(start, pos), start until pos))
+                tokens.add(CodeToken(TokenType.STRING, start until pos, code))
                 continue
             }
 
@@ -131,7 +131,7 @@ internal object KotlinLexer : BaseLexer() {
                 }
                 // 长整型后缀
                 if (pos < code.length && (code[pos] == 'L' || code[pos] == 'f' || code[pos] == 'F')) pos++
-                tokens.add(CodeToken(TokenType.NUMBER, code.substring(start, pos), start until pos))
+                tokens.add(CodeToken(TokenType.NUMBER, start until pos, code))
                 continue
             }
 
@@ -147,7 +147,7 @@ internal object KotlinLexer : BaseLexer() {
                     pos < code.length && code[pos] == '(' -> TokenType.FUNCTION
                     else -> TokenType.IDENTIFIER
                 }
-                tokens.add(CodeToken(type, word, start until pos))
+                tokens.add(CodeToken(type, start until pos, code))
                 continue
             }
 
@@ -162,19 +162,19 @@ internal object KotlinLexer : BaseLexer() {
                     twoChar in setOf("==", "!=", "<=", ">=", "&&", "||", "++", "--", "+=", "-=", "*=", "/=", "%=", "->", "=>", "::", "?.") -> pos += 2
                     else -> pos++
                 }
-                tokens.add(CodeToken(TokenType.OPERATOR, code.substring(start, pos), start until pos))
+                tokens.add(CodeToken(TokenType.OPERATOR, start until pos, code))
                 continue
             }
 
             // 标点符号
             if (c in "{}()[];,.$") {
-                tokens.add(CodeToken(TokenType.PUNCTUATION, c.toString(), pos until pos + 1))
+                tokens.add(CodeToken(TokenType.PUNCTUATION, pos until pos + 1, code))
                 pos++
                 continue
             }
 
             // 其他字符（空白、换行等）作为 PLAIN
-            tokens.add(CodeToken(TokenType.PLAIN, c.toString(), pos until pos + 1))
+            tokens.add(CodeToken(TokenType.PLAIN, pos until pos + 1, code))
             pos++
         }
 

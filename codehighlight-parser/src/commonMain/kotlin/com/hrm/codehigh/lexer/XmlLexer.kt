@@ -42,7 +42,7 @@ private fun tokenizeXml(code: String, isHtml: Boolean): List<CodeToken> {
             } else {
                 pos = code.length
             }
-            tokens.add(CodeToken(TokenType.COMMENT, code.substring(start, pos), start until pos))
+            tokens.add(CodeToken(TokenType.COMMENT, start until pos, code))
             continue
         }
 
@@ -56,7 +56,7 @@ private fun tokenizeXml(code: String, isHtml: Boolean): List<CodeToken> {
             } else {
                 pos = code.length
             }
-            tokens.add(CodeToken(TokenType.STRING, code.substring(start, pos), start until pos))
+            tokens.add(CodeToken(TokenType.STRING, start until pos, code))
             continue
         }
 
@@ -65,7 +65,7 @@ private fun tokenizeXml(code: String, isHtml: Boolean): List<CodeToken> {
             val start = pos
             while (pos < code.length && code[pos] != '>') pos++
             if (pos < code.length) pos++
-            tokens.add(CodeToken(TokenType.ANNOTATION, code.substring(start, pos), start until pos))
+            tokens.add(CodeToken(TokenType.ANNOTATION, start until pos, code))
             continue
         }
 
@@ -79,7 +79,7 @@ private fun tokenizeXml(code: String, isHtml: Boolean): List<CodeToken> {
             } else {
                 pos = code.length
             }
-            tokens.add(CodeToken(TokenType.ANNOTATION, code.substring(start, pos), start until pos))
+            tokens.add(CodeToken(TokenType.ANNOTATION, start until pos, code))
             continue
         }
 
@@ -96,10 +96,10 @@ private fun tokenizeXml(code: String, isHtml: Boolean): List<CodeToken> {
             val tagName = code.substring(tagNameStart, pos)
 
             if (tagName.isNotEmpty()) {
-                tokens.add(CodeToken(TokenType.PUNCTUATION, code.substring(start, tagNameStart), start until tagNameStart))
-                tokens.add(CodeToken(TokenType.FUNCTION, tagName, tagNameStart until pos))
+                tokens.add(CodeToken(TokenType.PUNCTUATION, start until tagNameStart, code))
+                tokens.add(CodeToken(TokenType.FUNCTION, tagNameStart until pos, code))
             } else {
-                tokens.add(CodeToken(TokenType.PUNCTUATION, code.substring(start, pos), start until pos))
+                tokens.add(CodeToken(TokenType.PUNCTUATION, start until pos, code))
             }
 
             // 属性
@@ -108,13 +108,13 @@ private fun tokenizeXml(code: String, isHtml: Boolean): List<CodeToken> {
                 if (code[pos].isWhitespace()) {
                     val wsStart = pos
                     while (pos < code.length && code[pos].isWhitespace()) pos++
-                    tokens.add(CodeToken(TokenType.PLAIN, code.substring(wsStart, pos), wsStart until pos))
+                    tokens.add(CodeToken(TokenType.PLAIN, wsStart until pos, code))
                     continue
                 }
 
                 // 自闭合 />
                 if (code[pos] == '/' && pos + 1 < code.length && code[pos + 1] == '>') {
-                    tokens.add(CodeToken(TokenType.PUNCTUATION, "/>", pos until pos + 2))
+                    tokens.add(CodeToken(TokenType.PUNCTUATION, pos until pos + 2, code))
                     pos += 2
                     break
                 }
@@ -123,14 +123,14 @@ private fun tokenizeXml(code: String, isHtml: Boolean): List<CodeToken> {
                 if (code[pos].isLetter() || code[pos] == '_' || code[pos] == ':') {
                     val attrStart = pos
                     while (pos < code.length && !code[pos].isWhitespace() && code[pos] != '=' && code[pos] != '>' && code[pos] != '/') pos++
-                    tokens.add(CodeToken(TokenType.IDENTIFIER, code.substring(attrStart, pos), attrStart until pos))
+                    tokens.add(CodeToken(TokenType.IDENTIFIER, attrStart until pos, code))
 
                     // 跳过空白
                     while (pos < code.length && code[pos] == ' ') pos++
 
                     // 属性值
                     if (pos < code.length && code[pos] == '=') {
-                        tokens.add(CodeToken(TokenType.OPERATOR, "=", pos until pos + 1))
+                        tokens.add(CodeToken(TokenType.OPERATOR, pos until pos + 1, code))
                         pos++
                         while (pos < code.length && code[pos] == ' ') pos++
                         if (pos < code.length && (code[pos] == '"' || code[pos] == '\'')) {
@@ -139,20 +139,20 @@ private fun tokenizeXml(code: String, isHtml: Boolean): List<CodeToken> {
                             pos++
                             while (pos < code.length && code[pos] != quote) pos++
                             if (pos < code.length) pos++
-                            tokens.add(CodeToken(TokenType.STRING, code.substring(valStart, pos), valStart until pos))
+                            tokens.add(CodeToken(TokenType.STRING, valStart until pos, code))
                         }
                     }
                     continue
                 }
 
                 // 其他字符
-                tokens.add(CodeToken(TokenType.PLAIN, code[pos].toString(), pos until pos + 1))
+                tokens.add(CodeToken(TokenType.PLAIN, pos until pos + 1, code))
                 pos++
             }
 
             // 闭合 >
             if (pos < code.length && code[pos] == '>') {
-                tokens.add(CodeToken(TokenType.PUNCTUATION, ">", pos until pos + 1))
+                tokens.add(CodeToken(TokenType.PUNCTUATION, pos until pos + 1, code))
                 pos++
             }
             continue
@@ -162,7 +162,7 @@ private fun tokenizeXml(code: String, isHtml: Boolean): List<CodeToken> {
         val start = pos
         while (pos < code.length && code[pos] != '<') pos++
         if (start < pos) {
-            tokens.add(CodeToken(TokenType.PLAIN, code.substring(start, pos), start until pos))
+            tokens.add(CodeToken(TokenType.PLAIN, start until pos, code))
         }
     }
 

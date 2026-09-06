@@ -18,28 +18,28 @@ internal object DiffLexer : BaseLexer() {
             if (line.isNotEmpty()) {
                 when {
                     line.startsWith("diff ") || line.startsWith("index ") -> {
-                        tokens.add(CodeToken(TokenType.ANNOTATION, line, offset until rangeEnd))
+                        tokens.add(CodeToken(TokenType.ANNOTATION, offset until rangeEnd, code))
                     }
                     line.startsWith("@@") -> {
-                        tokens.add(CodeToken(TokenType.FUNCTION, line, offset until rangeEnd))
+                        tokens.add(CodeToken(TokenType.FUNCTION, offset until rangeEnd, code))
                     }
                     line.startsWith("+++") || line.startsWith("---") -> {
-                        tokens.add(CodeToken(TokenType.TYPE, line, offset until rangeEnd))
+                        tokens.add(CodeToken(TokenType.TYPE, offset until rangeEnd, code))
                     }
                     line.startsWith("+") || line.startsWith("-") -> {
-                        tokens.add(CodeToken(TokenType.OPERATOR, line.substring(0, 1), offset until offset + 1))
+                        tokens.add(CodeToken(TokenType.OPERATOR, offset until offset + 1, code))
                         if (lineLength > 1) {
-                            tokens.add(CodeToken(TokenType.PLAIN, line.substring(1), offset + 1 until rangeEnd))
+                            tokens.add(CodeToken(TokenType.PLAIN, offset + 1 until rangeEnd, code))
                         }
                     }
                     else -> {
-                        tokens.add(CodeToken(TokenType.PLAIN, line, offset until rangeEnd))
+                        tokens.add(CodeToken(TokenType.PLAIN, offset until rangeEnd, code))
                     }
                 }
             }
 
             if (index < lines.lastIndex) {
-                tokens.add(CodeToken(TokenType.PLAIN, "\n", rangeEnd until rangeEnd + 1))
+                tokens.add(CodeToken(TokenType.PLAIN, rangeEnd until rangeEnd + 1, code))
                 offset = rangeEnd + 1
             } else {
                 offset = rangeEnd

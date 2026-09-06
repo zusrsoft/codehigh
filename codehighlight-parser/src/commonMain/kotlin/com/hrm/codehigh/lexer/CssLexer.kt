@@ -32,7 +32,7 @@ internal object CssLexer : BaseLexer() {
                 } else {
                     pos = code.length
                 }
-                tokens.add(CodeToken(TokenType.COMMENT, code.substring(start, pos), start until pos))
+                tokens.add(CodeToken(TokenType.COMMENT, start until pos, code))
                 continue
             }
 
@@ -41,7 +41,7 @@ internal object CssLexer : BaseLexer() {
                 val start = pos
                 pos++
                 while (pos < code.length && (code[pos].isLetterOrDigit() || code[pos] == '-')) pos++
-                tokens.add(CodeToken(TokenType.KEYWORD, code.substring(start, pos), start until pos))
+                tokens.add(CodeToken(TokenType.KEYWORD, start until pos, code))
                 continue
             }
 
@@ -55,7 +55,7 @@ internal object CssLexer : BaseLexer() {
                     pos++
                 }
                 if (pos < code.length) pos++
-                tokens.add(CodeToken(TokenType.STRING, code.substring(start, pos), start until pos))
+                tokens.add(CodeToken(TokenType.STRING, start until pos, code))
                 continue
             }
 
@@ -65,11 +65,11 @@ internal object CssLexer : BaseLexer() {
                 pos++
                 while (pos < code.length && (code[pos].isDigit() || code[pos] in 'a'..'f' || code[pos] in 'A'..'F')) pos++
                 if (pos > start + 1) {
-                    tokens.add(CodeToken(TokenType.NUMBER, code.substring(start, pos), start until pos))
+                    tokens.add(CodeToken(TokenType.NUMBER, start until pos, code))
                 } else {
                     // 可能是 ID 选择器
                     while (pos < code.length && (code[pos].isLetterOrDigit() || code[pos] == '-' || code[pos] == '_')) pos++
-                    tokens.add(CodeToken(TokenType.FUNCTION, code.substring(start, pos), start until pos))
+                    tokens.add(CodeToken(TokenType.FUNCTION, start until pos, code))
                 }
                 continue
             }
@@ -86,7 +86,7 @@ internal object CssLexer : BaseLexer() {
                 }
                 // 单位
                 while (pos < code.length && (code[pos].isLetter() || code[pos] == '%')) pos++
-                tokens.add(CodeToken(TokenType.NUMBER, code.substring(start, pos), start until pos))
+                tokens.add(CodeToken(TokenType.NUMBER, start until pos, code))
                 continue
             }
 
@@ -104,7 +104,7 @@ internal object CssLexer : BaseLexer() {
                     word.startsWith("--") -> TokenType.VARIABLE // CSS 自定义属性
                     else -> TokenType.PLAIN
                 }
-                tokens.add(CodeToken(type, word, start until pos))
+                tokens.add(CodeToken(type, start until pos, code))
                 continue
             }
 
@@ -115,9 +115,9 @@ internal object CssLexer : BaseLexer() {
                 if (pos < code.length && code[pos] == ':') pos++ // ::
                 while (pos < code.length && (code[pos].isLetterOrDigit() || code[pos] == '-')) pos++
                 if (pos > start + 1) {
-                    tokens.add(CodeToken(TokenType.KEYWORD, code.substring(start, pos), start until pos))
+                    tokens.add(CodeToken(TokenType.KEYWORD, start until pos, code))
                 } else {
-                    tokens.add(CodeToken(TokenType.PUNCTUATION, ":", start until start + 1))
+                    tokens.add(CodeToken(TokenType.PUNCTUATION, start until start + 1, code))
                 }
                 continue
             }
@@ -128,9 +128,9 @@ internal object CssLexer : BaseLexer() {
                 pos++
                 if (pos < code.length && (code[pos].isLetter() || code[pos] == '_' || code[pos] == '-')) {
                     while (pos < code.length && (code[pos].isLetterOrDigit() || code[pos] == '-' || code[pos] == '_')) pos++
-                    tokens.add(CodeToken(TokenType.FUNCTION, code.substring(start, pos), start until pos))
+                    tokens.add(CodeToken(TokenType.FUNCTION, start until pos, code))
                 } else {
-                    tokens.add(CodeToken(TokenType.PUNCTUATION, ".", start until start + 1))
+                    tokens.add(CodeToken(TokenType.PUNCTUATION, start until start + 1, code))
                 }
                 continue
             }
@@ -141,7 +141,7 @@ internal object CssLexer : BaseLexer() {
                 pos++
                 while (pos < code.length && code[pos] != ']') pos++
                 if (pos < code.length) pos++
-                tokens.add(CodeToken(TokenType.FUNCTION, code.substring(start, pos), start until pos))
+                tokens.add(CodeToken(TokenType.FUNCTION, start until pos, code))
                 continue
             }
 
@@ -153,19 +153,19 @@ internal object CssLexer : BaseLexer() {
                     twoChar in setOf("~=", "|=", "^=", "$=", "*=", "!=") -> pos += 2
                     else -> pos++
                 }
-                tokens.add(CodeToken(TokenType.OPERATOR, code.substring(start, pos), start until pos))
+                tokens.add(CodeToken(TokenType.OPERATOR, start until pos, code))
                 continue
             }
 
             // 标点符号
             if (c in "{}();,>+~") {
-                tokens.add(CodeToken(TokenType.PUNCTUATION, c.toString(), pos until pos + 1))
+                tokens.add(CodeToken(TokenType.PUNCTUATION, pos until pos + 1, code))
                 pos++
                 continue
             }
 
             // 其他字符
-            tokens.add(CodeToken(TokenType.PLAIN, c.toString(), pos until pos + 1))
+            tokens.add(CodeToken(TokenType.PLAIN, pos until pos + 1, code))
             pos++
         }
 

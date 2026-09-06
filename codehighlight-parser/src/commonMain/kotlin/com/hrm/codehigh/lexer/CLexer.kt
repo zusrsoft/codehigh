@@ -97,7 +97,7 @@ private fun tokenizeC(code: String, isCpp: Boolean): List<CodeToken> {
                     pos++
                 }
             }
-            tokens.add(CodeToken(TokenType.ANNOTATION, code.substring(start, pos), start until pos))
+            tokens.add(CodeToken(TokenType.ANNOTATION, start until pos, code))
             continue
         }
 
@@ -105,7 +105,7 @@ private fun tokenizeC(code: String, isCpp: Boolean): List<CodeToken> {
         if (pos + 1 < code.length && code[pos] == '/' && code[pos + 1] == '/') {
             val start = pos
             while (pos < code.length && code[pos] != '\n') pos++
-            tokens.add(CodeToken(TokenType.COMMENT, code.substring(start, pos), start until pos))
+            tokens.add(CodeToken(TokenType.COMMENT, start until pos, code))
             continue
         }
 
@@ -119,7 +119,7 @@ private fun tokenizeC(code: String, isCpp: Boolean): List<CodeToken> {
             } else {
                 pos = code.length
             }
-            tokens.add(CodeToken(TokenType.COMMENT, code.substring(start, pos), start until pos))
+            tokens.add(CodeToken(TokenType.COMMENT, start until pos, code))
             continue
         }
 
@@ -134,7 +134,7 @@ private fun tokenizeC(code: String, isCpp: Boolean): List<CodeToken> {
             val endPattern = ")$delim\""
             while (pos < code.length && !code.startsWith(endPattern, pos)) pos++
             if (pos < code.length) pos += endPattern.length
-            tokens.add(CodeToken(TokenType.STRING, code.substring(start, pos), start until pos))
+            tokens.add(CodeToken(TokenType.STRING, start until pos, code))
             continue
         }
 
@@ -147,7 +147,7 @@ private fun tokenizeC(code: String, isCpp: Boolean): List<CodeToken> {
                 pos++
             }
             if (pos < code.length && code[pos] == '"') pos++
-            tokens.add(CodeToken(TokenType.STRING, code.substring(start, pos), start until pos))
+            tokens.add(CodeToken(TokenType.STRING, start until pos, code))
             continue
         }
 
@@ -160,7 +160,7 @@ private fun tokenizeC(code: String, isCpp: Boolean): List<CodeToken> {
                 pos++
             }
             if (pos < code.length && code[pos] == '\'') pos++
-            tokens.add(CodeToken(TokenType.STRING, code.substring(start, pos), start until pos))
+            tokens.add(CodeToken(TokenType.STRING, start until pos, code))
             continue
         }
 
@@ -184,7 +184,7 @@ private fun tokenizeC(code: String, isCpp: Boolean): List<CodeToken> {
             }
             // 类型后缀
             while (pos < code.length && code[pos] in "uUlLfF") pos++
-            tokens.add(CodeToken(TokenType.NUMBER, code.substring(start, pos), start until pos))
+            tokens.add(CodeToken(TokenType.NUMBER, start until pos, code))
             continue
         }
 
@@ -199,7 +199,7 @@ private fun tokenizeC(code: String, isCpp: Boolean): List<CodeToken> {
                 pos < code.length && code[pos] == '(' -> TokenType.FUNCTION
                 else -> TokenType.IDENTIFIER
             }
-            tokens.add(CodeToken(type, word, start until pos))
+            tokens.add(CodeToken(type, start until pos, code))
             continue
         }
 
@@ -213,19 +213,19 @@ private fun tokenizeC(code: String, isCpp: Boolean): List<CodeToken> {
                 twoChar in setOf("==", "!=", "<=", ">=", "&&", "||", "++", "--", "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "<<", ">>", "->", "::") -> pos += 2
                 else -> pos++
             }
-            tokens.add(CodeToken(TokenType.OPERATOR, code.substring(start, pos), start until pos))
+            tokens.add(CodeToken(TokenType.OPERATOR, start until pos, code))
             continue
         }
 
         // 标点符号
         if (c in "{}()[];,.$") {
-            tokens.add(CodeToken(TokenType.PUNCTUATION, c.toString(), pos until pos + 1))
+            tokens.add(CodeToken(TokenType.PUNCTUATION, pos until pos + 1, code))
             pos++
             continue
         }
 
         // 其他字符
-        tokens.add(CodeToken(TokenType.PLAIN, c.toString(), pos until pos + 1))
+        tokens.add(CodeToken(TokenType.PLAIN, pos until pos + 1, code))
         pos++
     }
 

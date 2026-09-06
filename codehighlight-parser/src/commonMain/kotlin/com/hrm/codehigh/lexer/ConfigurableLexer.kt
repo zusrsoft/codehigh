@@ -45,7 +45,7 @@ internal fun tokenizeWithSpec(code: String, spec: ConfigurableLexerSpec): List<C
         val fixedToken = fixedTokens.firstOrNull { code.startsWith(it, pos) }
         if (fixedToken != null) {
             val end = pos + fixedToken.length
-            tokens.add(CodeToken(spec.fixedTokens.getValue(fixedToken), code.substring(pos, end), pos until end))
+            tokens.add(CodeToken(spec.fixedTokens.getValue(fixedToken), pos until end, code))
             pos = end
             continue
         }
@@ -55,7 +55,7 @@ internal fun tokenizeWithSpec(code: String, spec: ConfigurableLexerSpec): List<C
             val start = pos
             val end = findDelimitedEnd(code, pos + blockComment.first.length, blockComment.second)
             pos = end
-            tokens.add(CodeToken(TokenType.COMMENT, code.substring(start, pos), start until pos))
+            tokens.add(CodeToken(TokenType.COMMENT, start until pos, code))
             continue
         }
 
@@ -63,7 +63,7 @@ internal fun tokenizeWithSpec(code: String, spec: ConfigurableLexerSpec): List<C
         if (lineComment != null) {
             val start = pos
             while (pos < code.length && code[pos] != '\n') pos++
-            tokens.add(CodeToken(TokenType.COMMENT, code.substring(start, pos), start until pos))
+            tokens.add(CodeToken(TokenType.COMMENT, start until pos, code))
             continue
         }
 
@@ -72,7 +72,7 @@ internal fun tokenizeWithSpec(code: String, spec: ConfigurableLexerSpec): List<C
             val start = pos
             val end = findDelimitedEnd(code, pos + blockString.first.length, blockString.second)
             pos = end
-            tokens.add(CodeToken(TokenType.STRING, code.substring(start, pos), start until pos))
+            tokens.add(CodeToken(TokenType.STRING, start until pos, code))
             continue
         }
 
@@ -81,7 +81,7 @@ internal fun tokenizeWithSpec(code: String, spec: ConfigurableLexerSpec): List<C
             val start = pos
             val end = findDelimitedEnd(code, pos + tripleString.length, tripleString)
             pos = end
-            tokens.add(CodeToken(TokenType.STRING, code.substring(start, pos), start until pos))
+            tokens.add(CodeToken(TokenType.STRING, start until pos, code))
             continue
         }
 
@@ -90,7 +90,7 @@ internal fun tokenizeWithSpec(code: String, spec: ConfigurableLexerSpec): List<C
             val start = pos
             pos++
             while (pos < code.length && isWordPart(code[pos], spec)) pos++
-            tokens.add(CodeToken(TokenType.ANNOTATION, code.substring(start, pos), start until pos))
+            tokens.add(CodeToken(TokenType.ANNOTATION, start until pos, code))
             continue
         }
 
@@ -117,7 +117,7 @@ internal fun tokenizeWithSpec(code: String, spec: ConfigurableLexerSpec): List<C
                     while (pos < code.length && code[pos].isDigit()) pos++
                 }
             }
-            tokens.add(CodeToken(TokenType.VARIABLE, code.substring(start, pos), start until pos))
+            tokens.add(CodeToken(TokenType.VARIABLE, start until pos, code))
             continue
         }
 
@@ -132,7 +132,7 @@ internal fun tokenizeWithSpec(code: String, spec: ConfigurableLexerSpec): List<C
                 pos++
             }
             if (pos < code.length && code[pos] == quote) pos++
-            tokens.add(CodeToken(TokenType.STRING, code.substring(start, pos), start until pos))
+            tokens.add(CodeToken(TokenType.STRING, start until pos, code))
             continue
         }
 
@@ -159,7 +159,7 @@ internal fun tokenizeWithSpec(code: String, spec: ConfigurableLexerSpec): List<C
                     while (pos < code.length && code[pos].isDigit()) pos++
                 }
             }
-            tokens.add(CodeToken(TokenType.NUMBER, code.substring(start, pos), start until pos))
+            tokens.add(CodeToken(TokenType.NUMBER, start until pos, code))
             continue
         }
 
@@ -177,25 +177,25 @@ internal fun tokenizeWithSpec(code: String, spec: ConfigurableLexerSpec): List<C
                 pos < code.length && code[pos] == '(' -> TokenType.FUNCTION
                 else -> TokenType.IDENTIFIER
             }
-            tokens.add(CodeToken(type, word, start until pos))
+            tokens.add(CodeToken(type, start until pos, code))
             continue
         }
 
         val operator = operators.firstOrNull { code.startsWith(it, pos) }
         if (operator != null) {
             val end = pos + operator.length
-            tokens.add(CodeToken(TokenType.OPERATOR, code.substring(pos, end), pos until end))
+            tokens.add(CodeToken(TokenType.OPERATOR, pos until end, code))
             pos = end
             continue
         }
 
         if (current in spec.punctuation) {
-            tokens.add(CodeToken(TokenType.PUNCTUATION, current.toString(), pos until pos + 1))
+            tokens.add(CodeToken(TokenType.PUNCTUATION, pos until pos + 1, code))
             pos++
             continue
         }
 
-        tokens.add(CodeToken(TokenType.PLAIN, current.toString(), pos until pos + 1))
+        tokens.add(CodeToken(TokenType.PLAIN, pos until pos + 1, code))
         pos++
     }
 

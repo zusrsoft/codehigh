@@ -10,16 +10,17 @@ class CodeLineRenderTest {
 
     @Test
     fun should_markHighlightedLines_when_highlightedLinesProvided() {
+        val src = "fun hello()\nprintln(\"ok\")\nreturn"
         val renders = buildLineRenders(
             sourceLines = listOf("fun hello()", "println(\"ok\")", "return"),
             tokens = listOf(
-                CodeToken(TokenType.KEYWORD, "fun", 0 until 3),
-                CodeToken(TokenType.PLAIN, " hello()", 3 until 11),
-                CodeToken(TokenType.PLAIN, "\n", 11 until 12),
-                CodeToken(TokenType.FUNCTION, "println", 12 until 19),
-                CodeToken(TokenType.PLAIN, "(\"ok\")", 19 until 25),
-                CodeToken(TokenType.PLAIN, "\n", 25 until 26),
-                CodeToken(TokenType.KEYWORD, "return", 26 until 32)
+                CodeToken(TokenType.KEYWORD, 0 until 3, src),
+                CodeToken(TokenType.PLAIN, 3 until 11, src),
+                CodeToken(TokenType.PLAIN, 11 until 12, src),
+                CodeToken(TokenType.FUNCTION, 12 until 19, src),
+                CodeToken(TokenType.PLAIN, 19 until 25, src),
+                CodeToken(TokenType.PLAIN, 25 until 26, src),
+                CodeToken(TokenType.KEYWORD, 26 until 32, src)
             ),
             theme = OneDarkProTheme,
             language = "kotlin",

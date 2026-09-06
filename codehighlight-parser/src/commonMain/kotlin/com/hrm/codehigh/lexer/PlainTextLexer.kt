@@ -11,6 +11,6 @@ import com.hrm.codehigh.ast.TokenType
 internal object PlainTextLexer : Lexer {
     override fun tokenize(code: String): List<CodeToken> {
         if (code.isEmpty()) return emptyList()
-        return listOf(CodeToken(TokenType.PLAIN, code, code.indices))
+        return listOf(CodeToken(TokenType.PLAIN, code.indices, code))
     }
 }

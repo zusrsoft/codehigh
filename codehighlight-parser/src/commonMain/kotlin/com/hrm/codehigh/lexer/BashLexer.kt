@@ -38,7 +38,7 @@ internal object BashLexer : BaseLexer() {
             if (c == '#') {
                 val start = pos
                 while (pos < code.length && code[pos] != '\n') pos++
-                tokens.add(CodeToken(TokenType.COMMENT, code.substring(start, pos), start until pos))
+                tokens.add(CodeToken(TokenType.COMMENT, start until pos, code))
                 continue
             }
 
@@ -48,7 +48,7 @@ internal object BashLexer : BaseLexer() {
                 pos++
                 while (pos < code.length && code[pos] != '\'') pos++
                 if (pos < code.length) pos++
-                tokens.add(CodeToken(TokenType.STRING, code.substring(start, pos), start until pos))
+                tokens.add(CodeToken(TokenType.STRING, start until pos, code))
                 continue
             }
 
@@ -61,7 +61,7 @@ internal object BashLexer : BaseLexer() {
                     pos++
                 }
                 if (pos < code.length) pos++
-                tokens.add(CodeToken(TokenType.STRING, code.substring(start, pos), start until pos))
+                tokens.add(CodeToken(TokenType.STRING, start until pos, code))
                 continue
             }
 
@@ -74,7 +74,7 @@ internal object BashLexer : BaseLexer() {
                     pos++
                 }
                 if (pos < code.length) pos++
-                tokens.add(CodeToken(TokenType.STRING, code.substring(start, pos), start until pos))
+                tokens.add(CodeToken(TokenType.STRING, start until pos, code))
                 continue
             }
 
@@ -104,7 +104,7 @@ internal object BashLexer : BaseLexer() {
                     }
                     pos < code.length && code[pos] in "@#?$!-*" -> pos++
                 }
-                tokens.add(CodeToken(TokenType.VARIABLE, code.substring(start, pos), start until pos))
+                tokens.add(CodeToken(TokenType.VARIABLE, start until pos, code))
                 continue
             }
 
@@ -116,7 +116,7 @@ internal object BashLexer : BaseLexer() {
                     pos++
                     while (pos < code.length && code[pos].isDigit()) pos++
                 }
-                tokens.add(CodeToken(TokenType.NUMBER, code.substring(start, pos), start until pos))
+                tokens.add(CodeToken(TokenType.NUMBER, start until pos, code))
                 continue
             }
 
@@ -130,7 +130,7 @@ internal object BashLexer : BaseLexer() {
                     word in builtins -> TokenType.BUILTIN
                     else -> TokenType.IDENTIFIER
                 }
-                tokens.add(CodeToken(type, word, start until pos))
+                tokens.add(CodeToken(type, start until pos, code))
                 continue
             }
 
@@ -142,19 +142,19 @@ internal object BashLexer : BaseLexer() {
                     twoChar in setOf("==", "!=", "<=", ">=", "&&", "||", ">>", "<<", "+=", "-=", "*=", "/=") -> pos += 2
                     else -> pos++
                 }
-                tokens.add(CodeToken(TokenType.OPERATOR, code.substring(start, pos), start until pos))
+                tokens.add(CodeToken(TokenType.OPERATOR, start until pos, code))
                 continue
             }
 
             // 标点符号
             if (c in "{}()[];,.:") {
-                tokens.add(CodeToken(TokenType.PUNCTUATION, c.toString(), pos until pos + 1))
+                tokens.add(CodeToken(TokenType.PUNCTUATION, pos until pos + 1, code))
                 pos++
                 continue
             }
 
             // 其他字符
-            tokens.add(CodeToken(TokenType.PLAIN, c.toString(), pos until pos + 1))
+            tokens.add(CodeToken(TokenType.PLAIN, pos until pos + 1, code))
             pos++
         }
 

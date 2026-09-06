@@ -25,7 +25,7 @@ internal object YamlLexer : BaseLexer() {
                 (pos == 0 || code[pos - 1] == '\n')) {
                 val start = pos
                 pos += 3
-                tokens.add(CodeToken(TokenType.KEYWORD, code.substring(start, pos), start until pos))
+                tokens.add(CodeToken(TokenType.KEYWORD, start until pos, code))
                 continue
             }
 
@@ -33,7 +33,7 @@ internal object YamlLexer : BaseLexer() {
             if (c == '#') {
                 val start = pos
                 while (pos < code.length && code[pos] != '\n') pos++
-                tokens.add(CodeToken(TokenType.COMMENT, code.substring(start, pos), start until pos))
+                tokens.add(CodeToken(TokenType.COMMENT, start until pos, code))
                 continue
             }
 
@@ -42,7 +42,7 @@ internal object YamlLexer : BaseLexer() {
                 val start = pos
                 pos++
                 while (pos < code.length && !code[pos].isWhitespace() && code[pos] != '\n') pos++
-                tokens.add(CodeToken(TokenType.ANNOTATION, code.substring(start, pos), start until pos))
+                tokens.add(CodeToken(TokenType.ANNOTATION, start until pos, code))
                 continue
             }
 
@@ -51,7 +51,7 @@ internal object YamlLexer : BaseLexer() {
                 val start = pos
                 pos++
                 while (pos < code.length && !code[pos].isWhitespace() && code[pos] != '\n') pos++
-                tokens.add(CodeToken(TokenType.VARIABLE, code.substring(start, pos), start until pos))
+                tokens.add(CodeToken(TokenType.VARIABLE, start until pos, code))
                 continue
             }
 
@@ -60,7 +60,7 @@ internal object YamlLexer : BaseLexer() {
                 val start = pos
                 pos++
                 while (pos < code.length && !code[pos].isWhitespace() && code[pos] != '\n') pos++
-                tokens.add(CodeToken(TokenType.ANNOTATION, code.substring(start, pos), start until pos))
+                tokens.add(CodeToken(TokenType.ANNOTATION, start until pos, code))
                 continue
             }
 
@@ -73,7 +73,7 @@ internal object YamlLexer : BaseLexer() {
                     pos++
                 }
                 if (pos < code.length && code[pos] == '"') pos++
-                tokens.add(CodeToken(TokenType.STRING, code.substring(start, pos), start until pos))
+                tokens.add(CodeToken(TokenType.STRING, start until pos, code))
                 continue
             }
 
@@ -89,7 +89,7 @@ internal object YamlLexer : BaseLexer() {
                     }
                 }
                 if (pos < code.length && code[pos] == '\'') pos++
-                tokens.add(CodeToken(TokenType.STRING, code.substring(start, pos), start until pos))
+                tokens.add(CodeToken(TokenType.STRING, start until pos, code))
                 continue
             }
 
@@ -107,7 +107,7 @@ internal object YamlLexer : BaseLexer() {
                     if (pos < code.length && (code[pos] == '+' || code[pos] == '-')) pos++
                     while (pos < code.length && code[pos].isDigit()) pos++
                 }
-                tokens.add(CodeToken(TokenType.NUMBER, code.substring(start, pos), start until pos))
+                tokens.add(CodeToken(TokenType.NUMBER, start until pos, code))
                 continue
             }
 
@@ -126,19 +126,19 @@ internal object YamlLexer : BaseLexer() {
                     isKey -> TokenType.KEYWORD
                     else -> TokenType.IDENTIFIER
                 }
-                tokens.add(CodeToken(type, word, start until pos))
+                tokens.add(CodeToken(type, start until pos, code))
                 continue
             }
 
             // 结构符号
             if (c in "{}[]|>:,-") {
-                tokens.add(CodeToken(TokenType.PUNCTUATION, c.toString(), pos until pos + 1))
+                tokens.add(CodeToken(TokenType.PUNCTUATION, pos until pos + 1, code))
                 pos++
                 continue
             }
 
             // 其他字符
-            tokens.add(CodeToken(TokenType.PLAIN, c.toString(), pos until pos + 1))
+            tokens.add(CodeToken(TokenType.PLAIN, pos until pos + 1, code))
             pos++
         }
 

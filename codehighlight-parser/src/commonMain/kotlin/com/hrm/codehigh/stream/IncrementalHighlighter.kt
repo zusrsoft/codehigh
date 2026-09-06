@@ -104,8 +104,8 @@ class IncrementalHighlighter {
         val dirtyTokens = lexer.tokenize(dirtyCode).map { token ->
             CodeToken(
                 type = token.type,
-                text = token.text,
-                range = (token.range.first + reparseStart)..(token.range.last + reparseStart)
+                range = (token.range.first + reparseStart)..(token.range.last + reparseStart),
+                source = newCode
             )
         }
 
