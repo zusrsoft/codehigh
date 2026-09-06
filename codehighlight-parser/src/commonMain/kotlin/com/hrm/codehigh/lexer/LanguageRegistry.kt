@@ -3,6 +3,11 @@ package com.hrm.codehigh.lexer
 /**
  * 语言词法分析器注册表，管理语言标识符到 Lexer 的映射。
  * 对外公开 get() 和 register() 方法，其余实现细节标记为 internal。
+ *
+ * 默认语言在类加载时注册一次（饿汉式，JVM 类初始化机制保证线程安全；
+ * JS 平台单线程无影响）。
+ * [register] 与 [registerAlias] 供外部扩展注入自定义语言，
+ * 但并发调用非线程安全，建议在应用初始化阶段（单线程）完成。
  */
 object LanguageRegistry {
 
@@ -12,8 +17,9 @@ object LanguageRegistry {
     /** 别名映射表，internal 不对外暴露 */
     internal val aliases: MutableMap<String, String> = mutableMapOf()
 
-    /** 是否已完成默认注册 */
-    private var defaultsRegistered = false
+    init {
+        registerDefaults()
+    }
 
     /**
      * 注册语言词法分析器。
@@ -43,7 +49,6 @@ object LanguageRegistry {
      * @return 对应的词法分析器，未找到时返回 null
      */
     fun get(lang: String): Lexer? {
-        ensureDefaultsRegistered()
         val normalized = lang.lowercase().trim()
         val canonical = aliases[normalized] ?: normalized
         return registry[canonical]
@@ -58,18 +63,8 @@ object LanguageRegistry {
     }
 
     /**
-     * 确保默认语言已注册（懒加载）。
-     */
-    private fun ensureDefaultsRegistered() {
-        if (!defaultsRegistered) {
-            registerDefaults()
-            defaultsRegistered = true
-        }
-    }
-
-    /**
      * 注册所有内置语言词法分析器。
-     * 模块初始化时内部调用，标记为 internal。
+     * 由 object 初始化块在类加载时调用一次，标记为 internal。
      */
     internal fun registerDefaults() {
         // 系统语言
