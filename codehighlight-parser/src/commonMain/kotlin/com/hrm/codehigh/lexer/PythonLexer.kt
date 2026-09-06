@@ -234,4 +234,17 @@ internal object PythonLexer : BaseLexer() {
 
         return tokens
     }
+
+    override fun isExtendableToken(token: CodeToken): Boolean {
+        if (token.type != TokenType.STRING) return super.isExtendableToken(token)
+        val t = token.text
+        if (t.length >= 2 && t[0] != '"' && t[0] != '\'' && t[0] != '`') {
+            // 带前缀字符串（f/r/b/u 及组合）：按前缀后的引号判定
+            val q = t.indexOfFirst { it == '"' || it == '\'' }
+            if (q in 1..2) {
+                return if (t.length > q + 1) t.last() != t[q] else true
+            }
+        }
+        return super.isExtendableToken(token)
+    }
 }

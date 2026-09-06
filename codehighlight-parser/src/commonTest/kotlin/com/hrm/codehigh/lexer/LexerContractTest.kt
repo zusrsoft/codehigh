@@ -30,6 +30,29 @@ class LexerContractTest {
     }
 
     @Test
+    fun should_extend_when_bareTripleQuoteOpener() {
+        assertTrue(KotlinLexer.isExtendableToken(CodeToken(TokenType.STRING, 0 until 3, "\"\"\"")))
+        assertTrue(KotlinLexer.isExtendableToken(CodeToken(TokenType.STRING, 0 until 4, "\"\"\"\"")))
+    }
+
+    @Test
+    fun should_notExtend_when_closedEmptyTripleQuote() {
+        assertFalse(KotlinLexer.isExtendableToken(CodeToken(TokenType.STRING, 0 until 6, "\"\"\"\"\"\"")))
+    }
+
+    @Test
+    fun should_extend_when_unclosedPrefixedString() {
+        val tokens = PythonLexer.tokenize("x = f\"abc")
+        assertTrue(PythonLexer.isExtendableToken(tokens.last { it.type == TokenType.STRING }))
+    }
+
+    @Test
+    fun should_notExtend_when_closedPrefixedString() {
+        val tokens = PythonLexer.tokenize("x = f\"abc\"")
+        assertFalse(PythonLexer.isExtendableToken(tokens.last { it.type == TokenType.STRING }))
+    }
+
+    @Test
     fun should_tokenizeNestedComment_when_kotlinBlockComment() {
         val tokens = KotlinLexer.tokenize("/* a /* b */ c */ val x = 1")
         assertEquals(1, tokens.count { it.type == TokenType.COMMENT })

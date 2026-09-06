@@ -34,8 +34,8 @@ public interface Lexer {
         return when (token.type) {
             TokenType.COMMENT -> t.length >= 2 && t.startsWith("/*") && !t.endsWith("*/")
             TokenType.STRING -> when {
-                t.length >= 3 && t.startsWith("\"\"\"") && !t.endsWith("\"\"\"") -> true
-                t.length >= 3 && t.startsWith("'''") && !t.endsWith("'''") -> true
+                t.startsWith("\"\"\"") -> t.length < 6 || !t.endsWith("\"\"\"")
+                t.startsWith("'''") -> t.length < 6 || !t.endsWith("'''")
                 t.length >= 2 && t.startsWith("\"") && !t.endsWith("\"") -> true
                 t.length >= 2 && t.startsWith("'") && !t.endsWith("'") -> true
                 t.length >= 2 && t.startsWith("`") && !t.endsWith("`") -> true
