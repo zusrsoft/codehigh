@@ -2,7 +2,7 @@
 
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.3.0-blue.svg)](https://kotlinlang.org)
 [![Compose Multiplatform](https://img.shields.io/badge/Compose%20Multiplatform-1.10.0-brightgreen.svg)](https://www.jetbrains.com/lp/compose-multiplatform/)
-[![Maven Central](https://img.shields.io/maven-central/v/io.github.huarangmeng/codehighlight-render.svg?color=orange&label=Maven%20Central)](https://central.sonatype.com/search?q=io.github.huarangmeng%3Acodehighlight-render)
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.zusrsoft/codehighlight-render.svg?color=orange&label=Maven%20Central)](https://central.sonatype.com/search?q=io.github.zusrsoft%3Acodehighlight-render)
 [![Android API](https://img.shields.io/badge/Android%20API-23%2B-brightgreen.svg)](https://android-arsenal.com/api?level=24)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
@@ -91,11 +91,11 @@ Add to your `gradle/libs.versions.toml`:
 
 ```toml
 [versions]
-codehigh = "1.1.0"
+codehigh = "1.1.2"
 
 [libraries]
-codehigh-render = { module = "io.github.huarangmeng:codehighlight-render", version.ref = "codehigh" }
-codehigh-parser = { module = "io.github.huarangmeng:codehighlight-parser", version.ref = "codehigh" }
+codehigh-render = { module = "io.github.zusrsoft:codehighlight-render", version.ref = "codehigh" }
+codehigh-parser = { module = "io.github.zusrsoft:codehighlight-parser", version.ref = "codehigh" }
 ```
 
 Then add it in your module's `build.gradle.kts`:
@@ -111,8 +111,8 @@ If you do not use Version Catalog, you can add the dependency directly:
 
 ```kotlin
 dependencies {
-    implementation("io.github.huarangmeng:codehighlight-render:1.1.0")
-    implementation("io.github.huarangmeng:codehighlight-parser:1.1.0")
+    implementation("io.github.zusrsoft:codehighlight-render:1.1.2")
+    implementation("io.github.zusrsoft:codehighlight-parser:1.1.2")
 }
 ```
 
@@ -341,8 +341,8 @@ For a detailed list of supported features, please refer to: [HIGHLIGHTER_COVERAG
 
 ## 💡 Recommended
 
-- [Markdown](https://github.com/huarangmeng/Markdown) — A dedicated Kotlin Multiplatform Markdown parsing and rendering library by the same author. If you need Markdown parsing or rendering, use it alongside `codehigh`.
-- [LaTeX](https://github.com/huarangmeng/LaTeX) — A Kotlin Multiplatform LaTeX parsing and rendering library by the same author. If you need both code highlighting and LaTeX rendering in your project, check it out!
+- [Markdown](https://github.com/zusrsoft/Markdown) — A dedicated Kotlin Multiplatform Markdown parsing and rendering library by the same author. If you need Markdown parsing or rendering, use it alongside `codehigh`.
+- [LaTeX](https://github.com/zusrsoft/LaTeX) — A Kotlin Multiplatform LaTeX parsing and rendering library by the same author. If you need both code highlighting and LaTeX rendering in your project, check it out!
 
 ## 📄 License
 

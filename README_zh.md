@@ -2,7 +2,7 @@
 
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.3.0-blue.svg)](https://kotlinlang.org)
 [![Compose Multiplatform](https://img.shields.io/badge/Compose%20Multiplatform-1.10.0-brightgreen.svg)](https://www.jetbrains.com/lp/compose-multiplatform/)
-[![Maven Central](https://img.shields.io/maven-central/v/io.github.huarangmeng/codehighlight-render.svg?color=orange&label=Maven%20Central)](https://central.sonatype.com/search?q=io.github.huarangmeng%3Acodehighlight-render)
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.zusrsoft/codehighlight-render.svg?color=orange&label=Maven%20Central)](https://central.sonatype.com/search?q=io.github.zusrsoft%3Acodehighlight-render)
 [![Android API](https://img.shields.io/badge/Android%20API-23%2B-brightgreen.svg)](https://android-arsenal.com/api?level=24)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
@@ -91,11 +91,11 @@
 
 ```toml
 [versions]
-codehigh = "1.1.0"
+codehigh = "1.1.2"
 
 [libraries]
-codehigh-render = { module = "io.github.huarangmeng:codehighlight-render", version.ref = "codehigh" }
-codehigh-parser = { module = "io.github.huarangmeng:codehighlight-parser", version.ref = "codehigh" }
+codehigh-render = { module = "io.github.zusrsoft:codehighlight-render", version.ref = "codehigh" }
+codehigh-parser = { module = "io.github.zusrsoft:codehighlight-parser", version.ref = "codehigh" }
 ```
 
 然后在模块的 `build.gradle.kts` 中引入：
@@ -111,8 +111,8 @@ dependencies {
 
 ```kotlin
 dependencies {
-    implementation("io.github.huarangmeng:codehighlight-render:1.1.0")
-    implementation("io.github.huarangmeng:codehighlight-parser:1.1.0")
+    implementation("io.github.zusrsoft:codehighlight-render:1.1.2")
+    implementation("io.github.zusrsoft:codehighlight-parser:1.1.2")
 }
 ```
 
@@ -341,8 +341,8 @@ CodeBlock(
 
 ## 💡 推荐项目
 
-- [Markdown](https://github.com/huarangmeng/Markdown) — 由同一作者开发的 Kotlin Multiplatform Markdown 解析与渲染库。如果你需要 Markdown 解析或渲染能力，请与 `codehigh` 搭配使用。
-- [LaTeX](https://github.com/huarangmeng/LaTeX) — 由同一作者开发的 Kotlin Multiplatform LaTeX 解析和渲染库。如果你的项目同时需要代码高亮和 LaTeX 渲染，不妨看看！
+- [Markdown](https://github.com/zusrsoft/Markdown) — 由同一作者开发的 Kotlin Multiplatform Markdown 解析与渲染库。如果你需要 Markdown 解析或渲染能力，请与 `codehigh` 搭配使用。
+- [LaTeX](https://github.com/zusrsoft/LaTeX) — 由同一作者开发的 Kotlin Multiplatform LaTeX 解析和渲染库。如果你的项目同时需要代码高亮和 LaTeX 渲染，不妨看看！
 
 ## 📄 许可证
 

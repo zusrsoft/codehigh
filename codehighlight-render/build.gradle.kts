@@ -77,7 +77,7 @@ mavenPublishing {
 
     signAllPublications()
 
-    coordinates("io.github.huarangmeng", "codehighlight-render", rootProject.property("VERSION").toString())
+    coordinates("io.github.zusrsoft", "codehighlight-render", rootProject.property("VERSION").toString())
 
     pom {
         name.set("CodeHigh Render")
@@ -87,7 +87,7 @@ mavenPublishing {
             """.trimIndent()
         )
         inceptionYear.set("2026")
-        url.set("https://github.com/huarangmeng/codehigh")
+        url.set("https://github.com/zusrsoft/codehigh")
         licenses {
             license {
                 name.set("MIT License")
@@ -97,15 +97,15 @@ mavenPublishing {
         }
         developers {
             developer {
-                id.set("huarangmeng")
-                name.set("huarangmeng")
-                url.set("https://github.com/huarangmeng/")
+                id.set("zusrsoft")
+                name.set("zusrsoft")
+                url.set("https://github.com/zusrsoft/")
             }
         }
         scm {
-            url.set("https://github.com/huarangmeng/codehigh")
-            connection.set("scm:git:git://github.com/huarangmeng/codehigh.git")
-            developerConnection.set("scm:git:ssh://git@github.com/huarangmeng/codehigh.git")
+            url.set("https://github.com/zusrsoft/codehigh")
+            connection.set("scm:git:git://github.com/zusrsoft/codehigh.git")
+            developerConnection.set("scm:git:ssh://git@github.com/zusrsoft/codehigh.git")
         }
     }
 }
