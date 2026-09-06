@@ -29,6 +29,12 @@ internal object KotlinLexer : BaseLexer() {
         "CharArray", "ByteArray", "ShortArray", "Sequence", "Flow"
     )
 
+    private val threeCharOps = setOf("..<")
+    private val twoCharOps = setOf(
+        "==", "!=", "<=", ">=", "&&", "||", "++", "--", "+=", "-=", "*=", "/=",
+        "%=", "->", "=>", "::", "?.", ".."
+    )
+
     override fun tokenize(code: String): List<CodeToken> {
         if (code.isEmpty()) return emptyList()
         val tokens = mutableListOf<CodeToken>()
@@ -45,15 +51,19 @@ internal object KotlinLexer : BaseLexer() {
                 continue
             }
 
-            // 多行注释
+            // 多行注释（Kotlin 支持嵌套）
             if (pos + 1 < code.length && code[pos] == '/' && code[pos + 1] == '*') {
                 val start = pos
                 pos += 2
-                while (pos + 1 < code.length && !(code[pos] == '*' && code[pos + 1] == '/')) pos++
-                if (pos + 1 < code.length) {
-                    pos += 2
-                } else {
-                    pos = code.length
+                var depth = 1
+                while (pos < code.length && depth > 0) {
+                    if (pos + 1 < code.length && code[pos] == '/' && code[pos + 1] == '*') {
+                        depth++; pos += 2
+                    } else if (pos + 1 < code.length && code[pos] == '*' && code[pos + 1] == '/') {
+                        depth--; pos += 2
+                    } else {
+                        pos++
+                    }
                 }
                 tokens.add(CodeToken(TokenType.COMMENT, start until pos, code))
                 continue
@@ -109,7 +119,7 @@ internal object KotlinLexer : BaseLexer() {
             }
 
             // 数字字面量
-            if (c.isDigit() || (c == '0' && pos + 1 < code.length && (code[pos + 1] == 'x' || code[pos + 1] == 'b' || code[pos + 1] == 'X' || code[pos + 1] == 'B'))) {
+            if (c.isDigit()) {
                 val start = pos
                 if (c == '0' && pos + 1 < code.length && (code[pos + 1] == 'x' || code[pos + 1] == 'X')) {
                     pos += 2
@@ -119,7 +129,8 @@ internal object KotlinLexer : BaseLexer() {
                     while (pos < code.length && (code[pos] == '0' || code[pos] == '1' || code[pos] == '_')) pos++
                 } else {
                     while (pos < code.length && (code[pos].isDigit() || code[pos] == '_')) pos++
-                    if (pos < code.length && code[pos] == '.') {
+                    // 小数点仅在后继不是 '.' 时吸收，避免吞掉范围运算符 .. / ..< 的首点
+                    if (pos < code.length && code[pos] == '.' && (pos + 1 >= code.length || code[pos + 1] != '.')) {
                         pos++
                         while (pos < code.length && (code[pos].isDigit() || code[pos] == '_')) pos++
                     }
@@ -151,15 +162,19 @@ internal object KotlinLexer : BaseLexer() {
                 continue
             }
 
-            // 运算符
-            if (c in "+-*/%=!<>&|^~?:") {
+            // 运算符（. 纳入以识别 .. 与 ..<；单 . 作为成员访问标点回退）
+            if (c in "+-*/%=!<>&|^~?:.") {
                 val start = pos
-                // 处理多字符运算符
-                val twoChar = if (pos + 1 < code.length) code.substring(pos, pos + 2) else ""
-                val threeChar = if (pos + 2 < code.length) code.substring(pos, pos + 3) else ""
+                val c1 = if (pos + 1 < code.length) code[pos + 1] else ' '
+                val c2 = if (pos + 2 < code.length) code[pos + 2] else ' '
                 when {
-                    threeChar in setOf("===", "!==", "...", "?:") -> pos += 3
-                    twoChar in setOf("==", "!=", "<=", ">=", "&&", "||", "++", "--", "+=", "-=", "*=", "/=", "%=", "->", "=>", "::", "?.") -> pos += 2
+                    "$c$c1$c2" in threeCharOps -> pos += 3
+                    "$c$c1" in twoCharOps -> pos += 2
+                    c == '.' -> {
+                        tokens.add(CodeToken(TokenType.PUNCTUATION, start until start + 1, code))
+                        pos++
+                        continue
+                    }
                     else -> pos++
                 }
                 tokens.add(CodeToken(TokenType.OPERATOR, start until pos, code))
@@ -167,7 +182,7 @@ internal object KotlinLexer : BaseLexer() {
             }
 
             // 标点符号
-            if (c in "{}()[];,.$") {
+            if (c in "{}()[];,.") {
                 tokens.add(CodeToken(TokenType.PUNCTUATION, pos until pos + 1, code))
                 pos++
                 continue

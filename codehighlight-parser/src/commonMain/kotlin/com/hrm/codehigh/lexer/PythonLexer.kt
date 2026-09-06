@@ -29,6 +29,26 @@ internal object PythonLexer : BaseLexer() {
         "AttributeError", "RuntimeError", "StopIteration", "NotImplementedError"
     )
 
+    private val stringPrefixes = setOf("r", "b", "u", "f", "rb", "br", "rf", "fr")
+
+    /** 返回 [pos] 起合法字符串前缀长度（后随引号才算），否则 0 */
+    private fun stringPrefixLengthAt(code: String, pos: Int): Int {
+        for (len in 2 downTo 1) {
+            if (pos + len >= code.length) continue
+            if (code.substring(pos, pos + len).lowercase() in stringPrefixes) {
+                val next = code[pos + len]
+                if (next == '"' || next == '\'') return len
+            }
+        }
+        return 0
+    }
+
+    private val threeCharOps = setOf("**=", "//=", ">>=", "<<=")
+    private val twoCharOps = setOf(
+        "==", "!=", "<=", ">=", "**", "//", "+=", "-=", "*=", "/=", "%=",
+        "&=", "|=", "^=", "->", "<<", ">>"
+    )
+
     override fun tokenize(code: String): List<CodeToken> {
         if (code.isEmpty()) return emptyList()
         val tokens = mutableListOf<CodeToken>()
@@ -82,18 +102,29 @@ internal object PythonLexer : BaseLexer() {
                 continue
             }
 
-            // f-string、r-string、b-string 前缀
-            if ((c == 'f' || c == 'r' || c == 'b' || c == 'F' || c == 'R' || c == 'B') &&
-                pos + 1 < code.length && (code[pos + 1] == '"' || code[pos + 1] == '\'')) {
+            // 字符串前缀（f/r/b/u 及 rb、br、rf、fr 组合，支持三引号）
+            val prefixLen = stringPrefixLengthAt(code, pos)
+            if (prefixLen > 0) {
                 val start = pos
-                pos++ // 跳过前缀
+                pos += prefixLen
                 val quote = code[pos]
-                pos++
-                while (pos < code.length && code[pos] != quote && code[pos] != '\n') {
-                    if (code[pos] == '\\' && pos + 1 < code.length) pos++
+                if (pos + 2 < code.length && code[pos + 1] == quote && code[pos + 2] == quote) {
+                    pos += 3
+                    while (pos + 2 < code.length &&
+                        !(code[pos] == quote && code[pos + 1] == quote && code[pos + 2] == quote)
+                    ) {
+                        if (code[pos] == '\\' && pos + 1 < code.length) pos++
+                        pos++
+                    }
+                    if (pos + 2 < code.length) pos += 3 else pos = code.length
+                } else {
                     pos++
+                    while (pos < code.length && code[pos] != quote && code[pos] != '\n') {
+                        if (code[pos] == '\\' && pos + 1 < code.length) pos++
+                        pos++
+                    }
+                    if (pos < code.length && code[pos] == quote) pos++
                 }
-                if (pos < code.length && code[pos] == quote) pos++
                 tokens.add(CodeToken(TokenType.STRING, start until pos, code))
                 continue
             }
@@ -172,11 +203,11 @@ internal object PythonLexer : BaseLexer() {
             // 运算符
             if (c in "+-*/%=!<>&|^~") {
                 val start = pos
-                val twoChar = if (pos + 1 < code.length) code.substring(pos, pos + 2) else ""
-                val threeChar = if (pos + 2 < code.length) code.substring(pos, pos + 3) else ""
+                val c1 = if (pos + 1 < code.length) code[pos + 1] else ' '
+                val c2 = if (pos + 2 < code.length) code[pos + 2] else ' '
                 when {
-                    threeChar in setOf("**=", "//=", ">>=", "<<=") -> pos += 3
-                    twoChar in setOf("==", "!=", "<=", ">=", "**", "//", "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "->", "<<", ">>") -> pos += 2
+                    "$c$c1$c2" in threeCharOps -> pos += 3
+                    "$c$c1" in twoCharOps -> pos += 2
                     else -> pos++
                 }
                 tokens.add(CodeToken(TokenType.OPERATOR, start until pos, code))

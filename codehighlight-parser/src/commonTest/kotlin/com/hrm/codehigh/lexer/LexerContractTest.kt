@@ -1,0 +1,68 @@
+package com.hrm.codehigh.lexer
+
+import com.hrm.codehigh.ast.CodeToken
+import com.hrm.codehigh.ast.TokenType
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+
+class LexerContractTest {
+
+    @Test
+    fun should_extend_when_unclosedBlockComment() {
+        assertTrue(KotlinLexer.isExtendableToken(CodeToken(TokenType.COMMENT, 0 until 20, "/* unclosed comment ")))
+    }
+
+    @Test
+    fun should_notExtend_when_closedBlockComment() {
+        assertFalse(KotlinLexer.isExtendableToken(CodeToken(TokenType.COMMENT, 0 until 12, "/* closed */")))
+    }
+
+    @Test
+    fun should_extend_when_unclosedTripleQuote() {
+        assertTrue(KotlinLexer.isExtendableToken(CodeToken(TokenType.STRING, 0 until 10, "\"\"\"abc\ndef")))
+    }
+
+    @Test
+    fun should_notExtend_when_closedString() {
+        assertFalse(KotlinLexer.isExtendableToken(CodeToken(TokenType.STRING, 0 until 4, "\"ab\"")))
+    }
+
+    @Test
+    fun should_tokenizeNestedComment_when_kotlinBlockComment() {
+        val tokens = KotlinLexer.tokenize("/* a /* b */ c */ val x = 1")
+        assertEquals(1, tokens.count { it.type == TokenType.COMMENT })
+        assertEquals("/* a /* b */ c */", tokens.first { it.type == TokenType.COMMENT }.text)
+    }
+
+    @Test
+    fun should_tokenizeRangeOperator_when_dotDot() {
+        val tokens = KotlinLexer.tokenize("1..5")
+        assertTrue(tokens.any { it.type == TokenType.OPERATOR && it.text == ".." })
+    }
+
+    @Test
+    fun should_tokenizeRangeUntil_when_dotDotLess() {
+        val tokens = KotlinLexer.tokenize("1..<5")
+        assertTrue(tokens.any { it.type == TokenType.OPERATOR && it.text == "..<" })
+    }
+
+    @Test
+    fun should_tokenizeTripleQuotedFString_when_python() {
+        val tokens = PythonLexer.tokenize("msg = f\"\"\"hello {name}\"\"\"")
+        assertEquals("f\"\"\"hello {name}\"\"\"", tokens.first { it.type == TokenType.STRING }.text)
+    }
+
+    @Test
+    fun should_tokenizeCombinedPrefix_when_pythonBytes() {
+        val tokens = PythonLexer.tokenize("data = rb'raw\\x00'")
+        assertEquals("rb'raw\\x00'", tokens.first { it.type == TokenType.STRING }.text)
+    }
+
+    @Test
+    fun should_keepIdentifier_when_prefixLetterFollowedByNonQuote() {
+        val tokens = PythonLexer.tokenize("fruits = 1")
+        assertTrue(tokens.any { it.type == TokenType.IDENTIFIER && it.text == "fruits" })
+    }
+}
