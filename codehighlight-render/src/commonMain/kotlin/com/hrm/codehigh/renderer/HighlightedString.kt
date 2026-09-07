@@ -26,6 +26,9 @@ internal fun buildLineRenders(
 ): List<CodeLineRender> {
     if (sourceLines.isEmpty()) return emptyList()
 
+    // language 归一提升：每行只比较已归一化值，避免逐行 lowercase 分配
+    val normalizedLanguage = language.lowercase()
+
     // 将所有 token 文本拼接后按 \n 拆分，重新映射到每行
     // 策略：先构建整体 AnnotatedString，再按换行符切割
     val full = buildHighlightedString(tokens, theme)
@@ -47,7 +50,7 @@ internal fun buildLineRenders(
             kind = resolveLineKind(
                 lineIndex = index,
                 lineText = sourceLines.getOrElse(index) { "" },
-                language = language,
+                language = normalizedLanguage,
                 highlightedLines = highlightedLines
             )
         )
@@ -66,37 +69,43 @@ fun buildHighlightedString(
     tokens: List<CodeToken>,
     theme: CodeTheme
 ): AnnotatedString {
+    // 按类型缓存 SpanStyle（主题单例、Token 类型有限），相邻同样式合并 span
+    val styleCache = HashMap<TokenType, SpanStyle>(TokenType.entries.size)
+    fun styleFor(type: TokenType): SpanStyle = styleCache.getOrPut(type) {
+        SpanStyle(
+            color = theme.safeColorFor(type),
+            fontWeight = if (type == TokenType.KEYWORD) FontWeight.Bold else FontWeight.Normal,
+            fontStyle = if (type == TokenType.COMMENT) FontStyle.Italic else FontStyle.Normal,
+        )
+    }
     return buildAnnotatedString {
+        var pushed = false
+        var lastStyle: SpanStyle? = null
         for (token in tokens) {
-            val color = theme.safeColorFor(token.type)
-            val fontWeight = when (token.type) {
-                TokenType.KEYWORD -> FontWeight.Bold
-                else -> FontWeight.Normal
+            val style = styleFor(token.type)
+            // 引用比较：缓存保证同类型返回同一实例，相邻同实例才合并 span
+            if (style !== lastStyle) {
+                if (pushed) pop()
+                pushStyle(style)
+                pushed = true
+                lastStyle = style
             }
-            val fontStyle = when (token.type) {
-                TokenType.COMMENT -> FontStyle.Italic
-                else -> FontStyle.Normal
-            }
-            pushStyle(
-                SpanStyle(
-                    color = color,
-                    fontWeight = fontWeight,
-                    fontStyle = fontStyle
-                )
-            )
             append(token.text)
-            pop()
         }
+        if (pushed) pop()
     }
 }
 
+/**
+ * 解析行类型。[language] 须为已归一化（lowercase）值。
+ */
 internal fun resolveLineKind(
     lineIndex: Int,
     lineText: String,
     language: String,
     highlightedLines: Set<Int>
 ): CodeLineKind {
-    if (language.lowercase() == "diff") {
+    if (language == "diff") {
         return when {
             lineText.startsWith("@@") -> CodeLineKind.DIFF_META_HUNK
             lineText.startsWith("diff ") || lineText.startsWith("index ") || lineText.startsWith("+++") || lineText.startsWith(
