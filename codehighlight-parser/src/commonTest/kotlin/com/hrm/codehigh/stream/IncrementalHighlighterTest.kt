@@ -6,6 +6,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNotSame
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class IncrementalHighlighterTest {
@@ -45,7 +47,7 @@ class IncrementalHighlighterTest {
         val ast1 = highlighter.update(code, "kotlin")
         val ast2 = highlighter.update(code, "kotlin")
         // 相同代码应返回缓存结果（同一对象）
-        assertEquals(ast1, ast2)
+        assertSame(ast1, ast2)
     }
 
     @Test
@@ -144,6 +146,7 @@ class IncrementalHighlighterTest {
         // 缓存清除后重新解析，结果应相同但不是同一对象
         assertEquals(ast1.source, ast2.source)
         assertEquals(ast1.language, ast2.language)
+        assertNotSame(ast1, ast2)
     }
 
     @Test

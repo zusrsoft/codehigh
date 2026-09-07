@@ -31,6 +31,11 @@ internal data class ConfigurableLexerSpec(
     val sortedBlockStrings: List<Pair<String, String>> by lazy { blockStrings.sortedByDescending { it.first.length } }
     val sortedTripleStrings: List<String> by lazy { tripleStrings.sortedByDescending { it.length } }
     val sortedOperators: List<String> by lazy { operators.sortedByDescending { it.length } }
+
+    // 大小写归一惰性缓存：caseInsensitiveWords 语言（sql/dockerfile）的重复 tokenize 不再重算 lowercase+toSet
+    val normalizedKeywords: Set<String> by lazy { normalizeWords(keywords, caseInsensitiveWords) }
+    val normalizedBuiltins: Set<String> by lazy { normalizeWords(builtins, caseInsensitiveWords) }
+    val normalizedTypes: Set<String> by lazy { normalizeWords(types, caseInsensitiveWords) }
 }
 
 internal fun tokenizeWithSpec(code: String, spec: ConfigurableLexerSpec): List<CodeToken> {
@@ -47,9 +52,9 @@ internal fun tokenizeWithSpec(code: String, spec: ConfigurableLexerSpec): List<C
     val tripleStrings = spec.sortedTripleStrings
     val operators = spec.sortedOperators
 
-    val keywords = normalizeWords(spec.keywords, spec.caseInsensitiveWords)
-    val builtins = normalizeWords(spec.builtins, spec.caseInsensitiveWords)
-    val types = normalizeWords(spec.types, spec.caseInsensitiveWords)
+    val keywords = spec.normalizedKeywords
+    val builtins = spec.normalizedBuiltins
+    val types = spec.normalizedTypes
 
     while (pos < code.length) {
         val fixedToken = fixedTokens.firstOrNull { code.startsWith(it, pos) }
@@ -224,6 +229,9 @@ internal fun tokenizeWithSpec(code: String, spec: ConfigurableLexerSpec): List<C
  * Token 未命中任何定界符起始前缀时返回 null，调用方回退 Lexer 默认实现。
  * 闭合判定与 tokenizeWithSpec 的 findDelimitedEnd 语义对齐：
  * 短于「起始+结束定界符」长度总和的形态必为未闭合 opener。
+ *
+ * 边界：STRING 分支不查 tripleStrings（现有语言三引号定界均由默认实现覆盖）；
+ * 未来若定义非标三引号定界需扩展此函数。
  */
 internal fun isExtendableTokenWithSpec(token: CodeToken, spec: ConfigurableLexerSpec): Boolean? {
     val text = token.text
