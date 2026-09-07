@@ -8,17 +8,9 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import com.hrm.codehigh.ast.CodeToken
 import com.hrm.codehigh.ast.TokenType
+import com.hrm.codehigh.theme.CodeLineKind
 import com.hrm.codehigh.theme.CodeTheme
 import com.hrm.codehigh.theme.safeColorFor
-
-internal enum class CodeLineKind {
-    NORMAL,
-    HIGHLIGHTED,
-    DIFF_ADDED,
-    DIFF_REMOVED,
-    DIFF_META_HEADER,
-    DIFF_META_HUNK
-}
 
 internal data class CodeLineRender(
     val text: AnnotatedString,

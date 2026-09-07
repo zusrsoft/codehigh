@@ -2,6 +2,7 @@ package com.hrm.codehigh.renderer
 
 import com.hrm.codehigh.ast.CodeToken
 import com.hrm.codehigh.ast.TokenType
+import com.hrm.codehigh.theme.CodeLineKind
 import com.hrm.codehigh.theme.OneDarkProTheme
 import kotlin.test.Test
 import kotlin.test.assertEquals

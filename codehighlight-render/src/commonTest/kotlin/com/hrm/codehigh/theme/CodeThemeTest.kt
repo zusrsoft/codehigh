@@ -9,6 +9,8 @@ import kotlin.test.assertNotNull
 
 class CodeThemeTest {
 
+    private val allThemes = listOf(OneDarkProTheme, GithubLightTheme, DraculaProTheme, SolarizedLightTheme)
+
     @Test
     fun should_returnColor_when_validTokenType() {
         val theme = OneDarkProTheme
@@ -18,67 +20,39 @@ class CodeThemeTest {
     }
 
     @Test
-    fun should_coverAllTokenTypes_when_oneDarkProTheme() {
-        val theme = OneDarkProTheme
-        for (type in TokenType.entries) {
-            val color = theme.colorFor(type)
-            assertNotNull(color)
+    fun should_coverAllTokenTypes_when_builtinThemes() {
+        for (theme in allThemes) {
+            for (type in TokenType.entries) {
+                assertNotEquals(Color.Unspecified, theme.colorFor(type), "${theme::class.simpleName} $type")
+            }
         }
     }
 
     @Test
-    fun should_coverAllTokenTypes_when_githubLightTheme() {
-        val theme = GithubLightTheme
-        for (type in TokenType.entries) {
-            val color = theme.colorFor(type)
-            assertNotNull(color)
+    fun should_fallbackToPlainColor_when_themeThrowsForType() {
+        val plain = OneDarkProTheme.colorFor(TokenType.PLAIN)
+        val broken = object : CodeTheme by OneDarkProTheme {
+            override fun colorFor(type: TokenType): Color =
+                if (type == TokenType.KEYWORD) error("not implemented") else OneDarkProTheme.colorFor(type)
+        }
+        assertEquals(plain, broken.safeColorFor(TokenType.KEYWORD))
+    }
+
+    @Test
+    fun should_provideDiffColors_when_builtinThemes() {
+        for (theme in allThemes) {
+            assertNotEquals(Color.Unspecified, theme.diffMarkerColor(CodeLineKind.DIFF_ADDED))
+            assertNotEquals(Color.Unspecified, theme.diffMarkerBackground(CodeLineKind.DIFF_REMOVED))
+            assertNotEquals(Color.Unspecified, theme.diffTextColor(CodeLineKind.DIFF_META_HUNK))
         }
     }
 
     @Test
-    fun should_coverAllTokenTypes_when_draculaProTheme() {
-        val theme = DraculaProTheme
-        for (type in TokenType.entries) {
-            val color = theme.colorFor(type)
-            assertNotNull(color)
-        }
-    }
-
-    @Test
-    fun should_coverAllTokenTypes_when_solarizedLightTheme() {
-        val theme = SolarizedLightTheme
-        for (type in TokenType.entries) {
-            val color = theme.colorFor(type)
-            assertNotNull(color)
-        }
-    }
-
-    @Test
-    fun should_beDark_when_oneDarkProTheme() {
+    fun should_beDarkOrLight_when_builtinThemes() {
         assertEquals(true, OneDarkProTheme.isDark)
-    }
-
-    @Test
-    fun should_beLight_when_githubLightTheme() {
-        assertEquals(false, GithubLightTheme.isDark)
-    }
-
-    @Test
-    fun should_beDark_when_draculaProTheme() {
         assertEquals(true, DraculaProTheme.isDark)
-    }
-
-    @Test
-    fun should_beLight_when_solarizedLightTheme() {
+        assertEquals(false, GithubLightTheme.isDark)
         assertEquals(false, SolarizedLightTheme.isDark)
-    }
-
-    @Test
-    fun should_fallbackToPlain_when_safeColorFor() {
-        val theme = OneDarkProTheme
-        val plainColor = theme.colorFor(TokenType.PLAIN)
-        val safeColor = theme.safeColorFor(TokenType.PLAIN)
-        assertEquals(plainColor, safeColor)
     }
 
     @Test

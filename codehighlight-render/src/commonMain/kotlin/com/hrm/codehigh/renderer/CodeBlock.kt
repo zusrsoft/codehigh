@@ -36,6 +36,7 @@ import com.hrm.codehigh.ast.CodeToken
 import com.hrm.codehigh.ast.TokenType
 import com.hrm.codehigh.i18n.Strings
 import com.hrm.codehigh.stream.IncrementalHighlighter
+import com.hrm.codehigh.theme.CodeLineKind
 import com.hrm.codehigh.theme.CodeTheme
 import com.hrm.codehigh.theme.LocalCodeTheme
 import kotlinx.coroutines.delay
