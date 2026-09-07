@@ -1,9 +1,9 @@
 # CodeHigh
 
-[![Kotlin](https://img.shields.io/badge/Kotlin-2.3.0-blue.svg)](https://kotlinlang.org)
-[![Compose Multiplatform](https://img.shields.io/badge/Compose%20Multiplatform-1.10.0-brightgreen.svg)](https://www.jetbrains.com/lp/compose-multiplatform/)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.3.20-blue.svg)](https://kotlinlang.org)
+[![Compose Multiplatform](https://img.shields.io/badge/Compose%20Multiplatform-1.10.3-brightgreen.svg)](https://www.jetbrains.com/lp/compose-multiplatform/)
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.zusrsoft/codehighlight-render.svg?color=orange&label=Maven%20Central)](https://central.sonatype.com/search?q=io.github.zusrsoft%3Acodehighlight-render)
-[![Android API](https://img.shields.io/badge/Android%20API-23%2B-brightgreen.svg)](https://android-arsenal.com/api?level=24)
+[![Android API](https://img.shields.io/badge/Android%20API-23%2B-brightgreen.svg)](https://android-arsenal.com/api?level=23)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 基于 Kotlin Multiplatform (KMP) 和 Compose Multiplatform 开发的高性能跨平台代码高亮库，支持在 Android、iOS、Desktop (JVM) 和 Web (Wasm/JS) 平台上提供一致的渲染效果。
@@ -91,7 +91,7 @@
 
 ```toml
 [versions]
-codehigh = "1.1.2"
+codehigh = "2.0.0"
 
 [libraries]
 codehigh-render = { module = "io.github.zusrsoft:codehighlight-render", version.ref = "codehigh" }
@@ -111,8 +111,8 @@ dependencies {
 
 ```kotlin
 dependencies {
-    implementation("io.github.zusrsoft:codehighlight-render:1.1.2")
-    implementation("io.github.zusrsoft:codehighlight-parser:1.1.2")
+    implementation("io.github.zusrsoft:codehighlight-render:2.0.0")
+    implementation("io.github.zusrsoft:codehighlight-parser:2.0.0")
 }
 ```
 
@@ -173,7 +173,7 @@ fun MyText() {
 
 ### 测量行内代码尺寸
 
-在需要预先占位或调整布局时，可以使用测量 API 计算行内代码的宽高，并传入与 `InlineCode` 完全相同的 `InlineCodeStyle`。测量结果已经包含该 style 的 padding 和 border，因此可以直接用于占位或受约束布局：
+在需要预先占位或调整布局时，可以使用测量 API 计算行内代码的宽高，并传入与 `InlineCode` 完全相同的 `InlineCodeStyle`。测量结果已经包含该 style 的 padding 和 border，因此可以直接用于占位或受约束布局。`measureInlineCodeSize` 返回持有原始 `widthPx`/`heightPx` 的 `InlineCodeSize`，通过 `size.width(density)` / `size.height(density)` 转换为 `Dp`：
 
 ```kotlin
 import androidx.compose.foundation.layout.PaddingValues
@@ -210,8 +210,8 @@ fun MeasureExample() {
 
     Box(
         Modifier
-            .width(size.widthDp(density).dp)
-            .height(size.heightDp(density).dp)
+            .width(size.width(density))
+            .height(size.height(density))
     )
 }
 ```
@@ -239,7 +239,7 @@ fun StreamingCode() {
 
 ### 可折叠代码块
 
-对于长代码块，使用 `maxVisibleLines` 使其可折叠：
+对于长代码块，使用 `maxVisibleLines` 使其可折叠（默认 `500` 行，传 `null` 不限制）：
 
 ```kotlin
 CodeBlock(
@@ -332,7 +332,11 @@ CodeBlock(
 ### 运行测试
 
 ```bash
-./gradlew test
+# 库模块（JVM）
+./gradlew :codehighlight-parser:jvmTest :codehighlight-render:jvmTest :codehighlight-preview:jvmTest
+
+# 演示应用
+./gradlew :composeApp:jvmTest
 ```
 
 ## 📊 路线图与覆盖范围

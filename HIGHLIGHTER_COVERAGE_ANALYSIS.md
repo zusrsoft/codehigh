@@ -32,7 +32,7 @@
 #### CodeAst 结构
 - ✅ 持有 `List<CodeToken>` Token 列表
 - ✅ 持有原始字符串引用（用于增量更新时的前缀比对）
-- ✅ 标记为 `internal`，外部无需感知 AST 结构
+- ✅ 标记为 `public`，作为 parser 层解析结果公开，供 render 层与纯解析使用方复用
 
 **覆盖率**: 18/18 (100%)
 
@@ -352,30 +352,25 @@
 
 ---
 
-## 11. 流式增量渲染引擎（`stream/`，全部 `internal`）
+## 11. 流式增量渲染引擎（`stream/`）
 
 ### ✅ 已实现
 
-> 本模块为 `CodeBlock` 的内部实现，不对外暴露任何公开 API。
-> 流式场景通过 `CodeBlock(isStreaming = true)` 使用，调用方无需感知引擎细节。
+> `IncrementalHighlighter` 位于 parser 模块并已公开，作为 parser 层流式解析接口供外部直接使用；
+> 渲染层通过 `CodeBlock(isStreaming = true)` 自动启用增量解析，`StreamingCursor` 等 UI 细节不对外暴露。
 
-#### StreamingCursor（`internal`）
+#### StreamingCursor（`internal`，render 模块）
 - ✅ 光标闪烁动画组件，仅在 `isStreaming = true` 时由 `CodeBlock` 内部使用
 - ✅ `isStreaming = false` 时自动隐藏，完成最终渲染
 
-#### IncrementalHighlighter（`internal`）
+#### IncrementalHighlighter（`public`，parser 层流式解析接口，已公开）
 - ✅ 尾部脏区域检测（从最后一个受影响 Token 到文本末尾）
 - ✅ 稳定前缀 Token 直接复用，不重新解析
 - ✅ 单字符追加时增量解析耗时 ≤ 2ms
 - ✅ 相同代码字符串和语言命中 AST 缓存，直接返回缓存结果
 - ✅ 语言变化时触发全量重新解析（`language` 作为 `remember` 的 key）
 
-#### AstDiffEngine（`internal`）
-- ✅ 对比新旧 `CodeAst`，计算最小变更 Token 集合
-- ✅ 仅对变更 Token 触发 Compose 局部重组
-- ✅ 利用 `remember` + key 机制保证已稳定前缀不触发不必要重组
-
-**覆盖率**: 9/9 (100%)
+**覆盖率**: 7/7 (100%)
 
 ---
 
@@ -390,6 +385,8 @@
 - ✅ `LocalCodeTheme` CompositionLocal（外部注入主题）
 - ✅ `Lexer` 接口（外部可注入自定义 Lexer）
 - ✅ `LanguageRegistry.get()` / `register()`（注册表访问入口）
+- ✅ `CodeAst`（parser 层解析结果，供 render 层与纯解析使用方复用）
+- ✅ `IncrementalHighlighter`（parser 层流式解析接口）
 - ✅ `CodeBlock`（**唯一**渲染入口，含 `isStreaming` 参数，默认支持增量解析）
 - ✅ `InlineCode`（行内代码组件）
 - ✅ 4 套内置主题 object（`OneDarkProTheme`、`GithubLightTheme`、`DraculaProTheme`、`SolarizedLightTheme`）
@@ -397,14 +394,12 @@
 #### 标记为 `internal` 的实现细节
 - ✅ 所有具体 Lexer 实现类（`KotlinLexer`、`JavaLexer`、`PythonLexer` 等）
 - ✅ `PlainTextLexer`（降级兜底）
-- ✅ `CodeAst`（模块内部流转）
 - ✅ `CodeTheme.safeColorFor()`（回退逻辑）
 - ✅ `LanguageRegistry.aliases`（别名映射表）
 - ✅ `registerDefaults()`（模块初始化内部调用）
 - ✅ `LineNumberColumn`、`LanguageLabel`、`CopyButton`（UI 子组件）
 - ✅ `buildHighlightedString()`（AnnotatedString 构建）
 - ✅ `StreamingCursor`（光标动画，`CodeBlock` 内部使用）
-- ✅ `IncrementalHighlighter`、`AstDiffEngine`（增量引擎，`CodeBlock` 内部使用）
 
 **覆盖率**: 20/20 (100%)
 
@@ -420,7 +415,7 @@
 - ✅ 右侧：对应分类下的预览条目列表（直接展示，无第三层）
 
 #### LanguageCategory（语言高亮分类）
-- ✅ 列出所有支持语言（18 种），每个条目包含语言名称标题
+- ✅ 列出所有支持语言（28 种），每个条目包含语言名称标题
 - ✅ 每个条目调用 `CodeBlock` 渲染对应语言示例代码
 - ✅ 示例代码来自 `data/SampleCode.kt` 字符串常量
 
@@ -440,7 +435,7 @@
 - ✅ Token 点击回调演示（`onTokenClick` 回调，显示点击的 Token 信息）
 
 #### SampleCode 示例数据
-- ✅ 18 种语言的示例代码字符串常量集中存放
+- ✅ 28 种语言的示例代码字符串常量集中存放
 - ✅ 每段示例代码覆盖该语言的主要 Token 类型（关键字、字符串、注释、注解等）
 
 **覆盖率**: 16/16 (100%)
@@ -459,11 +454,11 @@
 - ✅ 公共逻辑在 `commonMain` 实现，无平台特定代码
 
 #### 剪贴板支持（平台差异处理）
-- ✅ Android：`ClipboardManager` 系统服务
-- ✅ iOS：`UIPasteboard.general`
-- ✅ Desktop：`java.awt.Toolkit.getDefaultToolkit().systemClipboard`
-- ✅ Web：`navigator.clipboard.writeText()`
-- ✅ 通过 `expect/actual` 机制封装平台差异
+- ✅ 基于 Compose `LocalClipboard` / `ClipEntry` 统一实现（T10 迁移后现状），复制按钮通过 `LocalClipboard.current.setClipEntry(...)` 写入
+- ✅ `internal expect/actual fun textClipEntry(text: String): ClipEntry` 封装平台差异：
+  - Android：`ClipData.newPlainText`
+  - JVM/Desktop：`StringSelection`
+  - iOS / JS / Wasm：`ClipEntry.withPlainText`
 
 **覆盖率**: 5/5 (100%)
 
@@ -483,10 +478,10 @@
 - ✅ 主题切换不触发 AST 重新解析，仅触发 Compose 重组
 
 #### 测试覆盖
-- ✅ `KotlinLexerTest`、`JavaLexerTest`、`PythonLexerTest` 等各语言词法分析器单元测试
-- ✅ `CodeThemeTest` 主题系统测试（颜色映射、回退逻辑）
-- ✅ `IncrementalHighlighterTest` 增量引擎测试（前缀复用、全量重解析触发条件）
-- ✅ 测试框架：`kotlin.test`，执行命令：`./gradlew :code-high:jvmTest`
+- ✅ parser：`KotlinLexerTest`、`EscapeBoundsTest`、`LexerContractTest`、`LanguageCoverageTest`、`ExtendedLanguageSupportTest`、`IncrementalHighlighterTest`
+- ✅ render：`CodeLineRenderTest`、`HighlightedStringTest`、`InlineCodeStyleTest`、`CodeThemeTest`
+- ✅ preview：`SampleCodeSmokeTest`（全部预览样例的字符全覆盖不变式）
+- ✅ 测试框架：`kotlin.test`，执行命令：`./gradlew :codehighlight-parser:jvmTest`
 
 **覆盖率**: 8/8 (100%)
 
@@ -506,12 +501,12 @@
 | 8 | 语言支持 — 标记/样式/差异语言 | 4/4 | 0/4 | 100% |
 | 9 | 项目边界说明 | - | - | - |
 | 10 | Compose 渲染组件（`renderer/`） | 15/15 | 0/15 | 100% |
-| 11 | 流式增量渲染引擎（`stream/`） | 9/9 | 0/9 | 100% |
+| 11 | 流式增量渲染引擎（`stream/`） | 7/7 | 0/7 | 100% |
 | 12 | 可见性原则（最小对外暴露） | 20/20 | 0/20 | 100% |
 | 13 | 预览演示模块（`code-high-preview`） | 16/16 | 0/16 | 100% |
 | 14 | 多平台支持（KMP） | 5/5 | 0/5 | 100% |
 | 15 | 性能与工程质量 | 8/8 | 0/8 | 100% |
-| | **总计** | **138/138** | **0/138** | **100%** |
+| | **总计** | **136/136** | **0/136** | **100%** |
 
 > **注意**：`StreamingCodeBlock` 已合并入 `CodeBlock`（通过 `isStreaming` 参数控制），不再作为独立公开组件。`CodeBlock` 默认启用增量解析引擎，调用方无需感知内部实现。
 
@@ -520,8 +515,8 @@
 ## 🧪 测试执行
 
 ```bash
-# codehighlight 模块测试
-./gradlew :codehighlight:jvmTest
+# parser 模块测试
+./gradlew :codehighlight-parser:jvmTest
 
 # 全部测试
 ./gradlew jvmTest
@@ -532,15 +527,17 @@
 ## 🏗️ 模块依赖关系
 
 ```
-androidApp
-  └── composeApp
-        └── codehighlight-preview
-              └── codehighlight
-                    ├── ast/
-                    ├── lexer/ → ast/
-                    ├── theme/ → ast/
-                    ├── renderer/ → ast/, theme/, lexer/
-                    └── stream/ → ast/, lexer/
+codehighlight-parser（ast/ lexer/ stream/，无内部依赖）
+        ↑ api
+codehighlight-render（renderer/ theme/ platform/）
+        ↑ implementation
+codehighlight-preview（预览组件与样例数据）
+        ↑ implementation
+composeApp（跨平台 Demo）
+        ↑ implementation
+androidApp（Android Demo）
+
+iosApp（iOS 应用入口，经 Xcode 工程链接 composeApp 导出的 framework）
 ```
 
 ---

@@ -1,9 +1,9 @@
 # CodeHigh
 
-[![Kotlin](https://img.shields.io/badge/Kotlin-2.3.0-blue.svg)](https://kotlinlang.org)
-[![Compose Multiplatform](https://img.shields.io/badge/Compose%20Multiplatform-1.10.0-brightgreen.svg)](https://www.jetbrains.com/lp/compose-multiplatform/)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.3.20-blue.svg)](https://kotlinlang.org)
+[![Compose Multiplatform](https://img.shields.io/badge/Compose%20Multiplatform-1.10.3-brightgreen.svg)](https://www.jetbrains.com/lp/compose-multiplatform/)
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.zusrsoft/codehighlight-render.svg?color=orange&label=Maven%20Central)](https://central.sonatype.com/search?q=io.github.zusrsoft%3Acodehighlight-render)
-[![Android API](https://img.shields.io/badge/Android%20API-23%2B-brightgreen.svg)](https://android-arsenal.com/api?level=24)
+[![Android API](https://img.shields.io/badge/Android%20API-23%2B-brightgreen.svg)](https://android-arsenal.com/api?level=23)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 A high-performance cross-platform code highlighting library developed based on Kotlin Multiplatform (KMP) and Compose Multiplatform. It supports consistent rendering effects on Android, iOS, Desktop (JVM), and Web (Wasm/JS) platforms.
@@ -91,7 +91,7 @@ Add to your `gradle/libs.versions.toml`:
 
 ```toml
 [versions]
-codehigh = "1.1.2"
+codehigh = "2.0.0"
 
 [libraries]
 codehigh-render = { module = "io.github.zusrsoft:codehighlight-render", version.ref = "codehigh" }
@@ -111,8 +111,8 @@ If you do not use Version Catalog, you can add the dependency directly:
 
 ```kotlin
 dependencies {
-    implementation("io.github.zusrsoft:codehighlight-render:1.1.2")
-    implementation("io.github.zusrsoft:codehighlight-parser:1.1.2")
+    implementation("io.github.zusrsoft:codehighlight-render:2.0.0")
+    implementation("io.github.zusrsoft:codehighlight-parser:2.0.0")
 }
 ```
 
@@ -173,7 +173,7 @@ fun MyText() {
 
 ### Measuring Inline Code Size
 
-When you need to pre-occupy space or adjust layout, use the measurement API with the exact same `InlineCodeStyle` that you pass to `InlineCode`. The measured size already includes the style's padding and border, so you can reuse it directly for placeholders or constrained layout slots:
+When you need to pre-occupy space or adjust layout, use the measurement API with the exact same `InlineCodeStyle` that you pass to `InlineCode`. The measured size already includes the style's padding and border, so you can reuse it directly for placeholders or constrained layout slots. `measureInlineCodeSize` returns an `InlineCodeSize` holding raw `widthPx`/`heightPx` values; convert them to `Dp` with `size.width(density)` / `size.height(density)`:
 
 ```kotlin
 import androidx.compose.foundation.layout.PaddingValues
@@ -210,8 +210,8 @@ fun MeasureExample() {
 
     Box(
         Modifier
-            .width(size.widthDp(density).dp)
-            .height(size.heightDp(density).dp)
+            .width(size.width(density))
+            .height(size.height(density))
     )
 }
 ```
@@ -239,7 +239,7 @@ fun StreamingCode() {
 
 ### Collapsible Code Blocks
 
-For long code blocks, use `maxVisibleLines` to make them collapsible:
+For long code blocks, use `maxVisibleLines` to make them collapsible (defaults to `500` lines; pass `null` for no limit):
 
 ```kotlin
 CodeBlock(
@@ -332,7 +332,11 @@ CodeBlock(
 ### Running Tests
 
 ```bash
-./gradlew test
+# Library modules (JVM)
+./gradlew :codehighlight-parser:jvmTest :codehighlight-render:jvmTest :codehighlight-preview:jvmTest
+
+# Demo application
+./gradlew :composeApp:jvmTest
 ```
 
 ## 📊 Roadmap & Coverage

@@ -1,0 +1,38 @@
+name: CI
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  test:
+    name: JVM / JS / Wasm / Android (ubuntu)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@4
+        with:
+          distribution: 'zulu'
+          java-version: 21
+      - name: Unit tests (JVM)
+        run: ./gradlew jvmTest --console=plain
+      - name: Unit tests (JS browser)
+        run: ./gradlew jsBrowserTest --console=plain
+      - name: Unit tests (Wasm browser)
+        run: ./gradlew wasmJsBrowserTest --console=plain
+      - name: Android demo build (regresses consumer-rules)
+        run: ./gradlew :androidApp:assembleDebug --console=plain
+
+  ios:
+    name: iOS (macos)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@4
+        with:
+          distribution: 'zulu'
+          java-version: 21
+      - name: iOS tests
+        run: ./gradlew :codehighlight-parser:iosSimulatorArm64Test :codehighlight-render:iosSimulatorArm64Test --console=plain
+      - name: iOS framework link check
+        run: ./gradlew :composeApp:linkDebugFrameworkIosSimulatorArm64 --console=plain
