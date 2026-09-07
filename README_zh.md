@@ -335,7 +335,7 @@ CodeBlock(
 # 库模块（JVM）
 ./gradlew :codehighlight-parser:jvmTest :codehighlight-render:jvmTest :codehighlight-preview:jvmTest
 
-# 演示应用
+# 演示应用（当前无测试，预留）
 ./gradlew :composeApp:jvmTest
 ```
 

@@ -58,7 +58,7 @@ code-high/src/commonTest/kotlin/com/hrm/codehigh/
 提交代码前必须执行测试并确保全部通过（`BUILD SUCCESSFUL`）：
 
 ```bash
-./gradlew :code-high:jvmTest   # 模块测试
+./gradlew :codehighlight-parser:jvmTest   # 模块测试
 ./gradlew jvmTest               # 全部测试
 ```
 

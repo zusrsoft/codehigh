@@ -335,7 +335,7 @@ CodeBlock(
 # Library modules (JVM)
 ./gradlew :codehighlight-parser:jvmTest :codehighlight-render:jvmTest :codehighlight-preview:jvmTest
 
-# Demo application
+# Demo application (tests currently empty, reserved)
 ./gradlew :composeApp:jvmTest
 ```
 

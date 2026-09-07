@@ -58,7 +58,7 @@ code-high/src/commonTest/kotlin/com/hrm/codehigh/
 提交代码前必须执行测试并确保全部通过（`BUILD SUCCESSFUL`）：
 
 ```bash
-./gradlew :code-high:jvmTest   # 模块测试
+./gradlew :codehighlight-parser:jvmTest   # 模块测试
 ./gradlew jvmTest               # 全部测试
 ```
 
@@ -77,7 +77,7 @@ code-high/src/commonTest/kotlin/com/hrm/codehigh/
 **修改渲染组件：**
 - [ ] 新增内部子组件（`StreamingCursor`、`IncrementalHighlighter` 等）标记为 `internal`，公开 API 保持向后兼容。
 - [ ] `CodeBlock` 签名变更时保留 `isStreaming` 参数，向后兼容。
-- [ ] `code-high-preview` 中验证了渲染效果，`jvmTest` 全部通过。
+- [ ] `codehighlight-preview` 中验证了渲染效果，`jvmTest` 全部通过。
 
 **通用：**
 - [ ] 所有不需要外部使用的类/函数/属性已标记为 `internal`。

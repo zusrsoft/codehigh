@@ -10,10 +10,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@4
+      - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: 21
+          cache: 'gradle'
       - name: Unit tests (JVM)
         run: ./gradlew jvmTest --console=plain
       - name: Unit tests (JS browser)
@@ -28,10 +29,11 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@4
+      - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: 21
+          cache: 'gradle'
       - name: iOS tests
         run: ./gradlew :codehighlight-parser:iosSimulatorArm64Test :codehighlight-render:iosSimulatorArm64Test --console=plain
       - name: iOS framework link check
