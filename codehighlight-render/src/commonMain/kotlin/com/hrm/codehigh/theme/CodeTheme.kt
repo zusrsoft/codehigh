@@ -7,6 +7,7 @@ import com.hrm.codehigh.ast.TokenType
 /**
  * 代码主题接口，定义代码高亮的颜色方案。
  * 对外公开，支持自定义主题实现。
+ * 实现方必须保持无状态/不可变——Compose 编译器信任 @Immutable 承诺，可变实现会导致重组缺失。
  */
 @Immutable
 interface CodeTheme {

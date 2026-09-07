@@ -41,9 +41,13 @@ class CodeThemeTest {
     @Test
     fun should_provideDiffColors_when_builtinThemes() {
         for (theme in allThemes) {
-            assertNotEquals(Color.Unspecified, theme.diffMarkerColor(CodeLineKind.DIFF_ADDED))
-            assertNotEquals(Color.Unspecified, theme.diffMarkerBackground(CodeLineKind.DIFF_REMOVED))
-            assertNotEquals(Color.Unspecified, theme.diffTextColor(CodeLineKind.DIFF_META_HUNK))
+            for (kind in CodeLineKind.entries) {
+                assertNotEquals(Color.Unspecified, theme.diffMarkerColor(kind), "${theme::class.simpleName} $kind")
+                assertNotEquals(Color.Unspecified, theme.diffTextColor(kind), "${theme::class.simpleName} $kind")
+            }
+            for (kind in listOf(CodeLineKind.DIFF_ADDED, CodeLineKind.DIFF_REMOVED, CodeLineKind.DIFF_META_HEADER, CodeLineKind.DIFF_META_HUNK)) {
+                assertNotEquals(Color.Unspecified, theme.diffMarkerBackground(kind), "${theme::class.simpleName} $kind")
+            }
         }
     }
 
