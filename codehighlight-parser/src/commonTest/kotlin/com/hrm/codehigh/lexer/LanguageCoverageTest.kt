@@ -3,7 +3,6 @@ package com.hrm.codehigh.lexer
 import com.hrm.codehigh.ast.TokenType
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class LanguageCoverageTest {
@@ -71,12 +70,8 @@ class LanguageCoverageTest {
 
     @Test
     fun should_resolveAllRegistryLanguages() {
-        val known = setOf(
-            "kotlin", "java", "swift", "python", "javascript", "typescript", "ruby", "php",
-            "dart", "scala", "lua", "haskell", "elixir", "go", "rust", "c", "cpp", "sql",
-            "json", "yaml", "r", "toml", "dockerfile", "bash", "diff", "xml", "html", "css"
-        )
-        known.forEach { assertNotNull(LanguageRegistry.get(it), "missing lexer for $it") }
+        // 双向断言：注册表既有语言全可解析，且新增语言未配样本时立即失败
+        assertEquals(samples.keys, LanguageRegistry.registry.keys.toSet())
     }
 
     @Test
