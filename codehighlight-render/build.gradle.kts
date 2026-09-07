@@ -9,6 +9,8 @@ plugins {
 }
 
 kotlin {
+    explicitApiWarning()
+
     jvmToolchain(21)
 
     android {
@@ -33,27 +35,18 @@ kotlin {
         }
     }
 
-    listOf(
-        iosArm64(),
-        iosSimulatorArm64()
-    ).forEach { iosTarget ->
-        iosTarget.binaries.framework {
-            baseName = "CodeHighlightRender"
-            isStatic = true
-        }
-    }
+    iosArm64()
+    iosSimulatorArm64()
 
     jvm()
 
     js {
         browser()
-        binaries.executable()
     }
 
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
         browser()
-        binaries.executable()
     }
 
     sourceSets {
@@ -73,11 +66,7 @@ kotlin {
 }
 
 mavenPublishing {
-    publishToMavenCentral(true)
-
-    signAllPublications()
-
-    coordinates("io.github.zusrsoft", "codehighlight-render", rootProject.property("VERSION").toString())
+    coordinates("io.github.zusrsoft", "codehighlight-render", libs.versions.codehigh.get())
 
     pom {
         name.set("CodeHigh Render")
@@ -86,26 +75,5 @@ mavenPublishing {
             Compose Multiplatform rendering layer for CodeHigh, built on codehighlight-parser.
             """.trimIndent()
         )
-        inceptionYear.set("2026")
-        url.set("https://github.com/zusrsoft/codehigh")
-        licenses {
-            license {
-                name.set("MIT License")
-                url.set("https://opensource.org/licenses/MIT")
-                distribution.set("repo")
-            }
-        }
-        developers {
-            developer {
-                id.set("zusrsoft")
-                name.set("zusrsoft")
-                url.set("https://github.com/zusrsoft/")
-            }
-        }
-        scm {
-            url.set("https://github.com/zusrsoft/codehigh")
-            connection.set("scm:git:git://github.com/zusrsoft/codehigh.git")
-            developerConnection.set("scm:git:ssh://git@github.com/zusrsoft/codehigh.git")
-        }
     }
 }
