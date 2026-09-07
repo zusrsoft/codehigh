@@ -343,6 +343,11 @@ CodeBlock(
 
 有关支持功能的详细列表，请参阅：[HIGHLIGHTER_COVERAGE_ANALYSIS.md](./HIGHLIGHTER_COVERAGE_ANALYSIS.md)
 
+## ⚠️ 已知限制
+
+- **词法器双轨并存**：旧版手写词法器与新版声明式词法器同时存在，后续版本将收敛统一。
+- **非懒加载渲染**：`CodeBlock` 内部仍以普通 `Column` 渲染行而非 `LazyColumn`；当前通过默认 `maxVisibleLines = 500` 上限与折叠控制成本，完整懒加载方案留待专项处理。
+
 ## 💡 推荐项目
 
 - [Markdown](https://github.com/zusrsoft/Markdown) — 由同一作者开发的 Kotlin Multiplatform Markdown 解析与渲染库。如果你需要 Markdown 解析或渲染能力，请与 `codehigh` 搭配使用。

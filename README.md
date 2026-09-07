@@ -343,6 +343,11 @@ CodeBlock(
 
 For a detailed list of supported features, please refer to: [HIGHLIGHTER_COVERAGE_ANALYSIS.md](./HIGHLIGHTER_COVERAGE_ANALYSIS.md)
 
+## ⚠️ Known Limitations
+
+- **Dual lexer tracks**: both the legacy hand-written lexers and the newer declarative lexers exist side by side; consolidation is planned for a future release.
+- **Non-lazy rendering**: `CodeBlock` internally renders lines in a regular `Column` rather than a `LazyColumn`. The default `maxVisibleLines = 500` cap plus the collapse control bound the cost; full lazy rendering is left for a dedicated follow-up.
+
 ## 💡 Recommended
 
 - [Markdown](https://github.com/zusrsoft/Markdown) — A dedicated Kotlin Multiplatform Markdown parsing and rendering library by the same author. If you need Markdown parsing or rendering, use it alongside `codehigh`.
