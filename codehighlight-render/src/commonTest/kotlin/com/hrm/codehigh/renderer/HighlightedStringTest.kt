@@ -23,13 +23,14 @@ class HighlightedStringTest {
 
     @Test
     fun should_keepDistinctSpans_when_styleChanges() {
-        val src = "fun x"
+        val src = "fun x /* c */"
         val tokens = listOf(
             CodeToken(TokenType.KEYWORD, 0 until 3, src),
             CodeToken(TokenType.PLAIN, 3 until 5, src),
+            CodeToken(TokenType.COMMENT, 5 until 12, src),
         )
         val s = buildHighlightedString(tokens, OneDarkProTheme)
-        assertEquals(2, s.spanStyles.size)
+        assertEquals(3, s.spanStyles.size)
     }
 
     @Test
@@ -54,5 +55,12 @@ class HighlightedStringTest {
         assertEquals(src, s.text)
         // 合并后 span 数应显著少于 token 数（连续同色 token 合并）
         assertTrue(s.spanStyles.size <= tokens.size, "spans=${s.spanStyles.size} tokens=${tokens.size}")
+        // span 范围应无缝衔接覆盖全文
+        var cursor = 0
+        for (span in s.spanStyles) {
+            assertEquals(cursor, span.start, "span 应从 $cursor 无缝衔接")
+            cursor = span.end
+        }
+        assertEquals(src.length, cursor, "最后 span 应覆盖到文末")
     }
 }
