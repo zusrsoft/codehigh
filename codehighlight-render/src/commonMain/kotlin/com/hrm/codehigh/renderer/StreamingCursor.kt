@@ -14,6 +14,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
@@ -22,12 +24,14 @@ import androidx.compose.ui.unit.dp
  *
  * @param isStreaming 是否处于流式输出状态
  * @param color 光标颜色
+ * @param cursorHeight 光标高度，默认跟随单行代码高度
  */
 @Composable
 internal fun StreamingCursor(
     isStreaming: Boolean,
     color: Color = Color.White,
     modifier: Modifier = Modifier,
+    cursorHeight: Dp = 16.dp,
 ) {
     if (!isStreaming) return
 
@@ -45,7 +49,8 @@ internal fun StreamingCursor(
     Box(
         modifier = modifier
             .width(2.dp)
-            .height(16.dp)
-            .background(color.copy(alpha = alpha))
+            .height(cursorHeight)
+            .graphicsLayer { this.alpha = alpha } // draw 阶段读值，避免每帧重组
+            .background(color)
     )
 }

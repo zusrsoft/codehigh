@@ -3,22 +3,10 @@ package com.hrm.codehigh.i18n
 import platform.Foundation.NSLocale
 import platform.Foundation.currentLocale
 import platform.Foundation.languageCode
-import platform.Foundation.localeIdentifier
+import platform.Foundation.preferredLanguages
 
-internal actual object PlatformLocale {
-    actual fun current(): LocaleInfo {
-        val locale = NSLocale.currentLocale
-        val lang = locale.languageCode ?: "en"
-        // 从 localeIdentifier 中提取国家代码，如 "zh_CN" -> "CN"
-        val localeId = locale.localeIdentifier ?: ""
-        val country = if (localeId.contains("_")) {
-            localeId.substringAfter("_").substringBefore("@")
-        } else {
-            ""
-        }
-        return LocaleInfo(
-            language = lang,
-            country = country
-        )
-    }
+internal actual fun platformLanguageTag(): String {
+    // 优先用户首选语言，回退系统区域
+    val preferred = NSLocale.preferredLanguages.firstOrNull() as? String
+    return preferred ?: NSLocale.currentLocale.languageCode
 }

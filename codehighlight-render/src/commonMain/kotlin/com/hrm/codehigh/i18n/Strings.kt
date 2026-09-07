@@ -1,81 +1,35 @@
 package com.hrm.codehigh.i18n
 
-import kotlin.math.max
-
 /**
- * 多语言字符串支持
- * 支持中文/英文，不支持的语言回退到英文
+ * 代码块内置文案（收起/展开/复制等）注入接口。
+ * 宿主可实现后通过 [LocalCodeBlockStrings] 覆盖默认文案。
  */
-internal object Strings {
-    /**
-     * 获取当前语言代码
-     * 在 JVM/Android 上使用系统语言，其他平台默认英文
-     */
-    private val languageCode: String by lazy {
-        getSystemLanguage()
-    }
+interface CodeBlockStrings {
+    fun collapse(): String
+    fun expand(hiddenLines: Int): String
+    fun copy(): String
+    fun copied(): String
+}
 
-    private fun getSystemLanguage(): String {
-        return try {
-            // 尝试获取系统语言
-            val locale = PlatformLocale.current()
-            locale.language.lowercase()
-        } catch (e: Exception) {
+/** 默认文案：跟随系统语言（中文/英文），语言检测在进程内仅执行一次 */
+internal object DefaultCodeBlockStrings : CodeBlockStrings {
+    private val languageCode: String by lazy {
+        try {
+            platformLanguageTag().substringBefore('-').ifBlank { "en" }.lowercase()
+        } catch (_: Exception) {
             "en"
         }
     }
+    private val isChinese: Boolean get() = languageCode.startsWith("zh")
 
-    /**
-     * 是否为中文环境
-     */
-    private val isChinese: Boolean
-        get() = languageCode.startsWith("zh")
-
-    /**
-     * 收起按钮文本
-     */
-    fun collapse(): String = if (isChinese) "▲ 收起" else "▲ Collapse"
-
-    /**
-     * 展开按钮文本
-     * @param hiddenLines 隐藏的行数
-     */
-    fun expand(hiddenLines: Int): String {
-        val lines = max(0, hiddenLines)
-        return if (isChinese) {
-            "▼ 展开 ($lines 行)"
-        } else {
-            "▼ Expand ($lines lines)"
-        }
+    override fun collapse(): String = if (isChinese) "▲ 收起" else "▲ Collapse"
+    override fun expand(hiddenLines: Int): String {
+        val n = maxOf(0, hiddenLines)
+        return if (isChinese) "▼ 展开 ($n 行)" else "▼ Expand ($n lines)"
     }
-
-    /**
-     * 复制按钮文本
-     */
-    fun copy(): String = if (isChinese) "复制" else "Copy"
-
-    /**
-     * 已复制提示文本
-     */
-    fun copied(): String = if (isChinese) "已复制" else "Copied"
-
-    /**
-     * 行号列标题
-     */
-    fun lineNumber(): String = if (isChinese) "行" else "Line"
+    override fun copy(): String = if (isChinese) "复制" else "Copy"
+    override fun copied(): String = if (isChinese) "已复制" else "Copied"
 }
 
-/**
- * 平台相关的 Locale 获取
- */
-internal expect object PlatformLocale {
-    fun current(): LocaleInfo
-}
-
-/**
- * 语言环境信息
- */
-internal data class LocaleInfo(
-    val language: String,
-    val country: String = ""
-)
+/** 平台语言标签（BCP-47，如 zh-Hans-CN），仅取主子标签做语言判断 */
+internal expect fun platformLanguageTag(): String

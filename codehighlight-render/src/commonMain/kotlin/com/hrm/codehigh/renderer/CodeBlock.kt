@@ -42,7 +42,8 @@ import androidx.compose.ui.unit.sp
 import com.hrm.codehigh.ast.CodeAst
 import com.hrm.codehigh.ast.CodeToken
 import com.hrm.codehigh.ast.TokenType
-import com.hrm.codehigh.i18n.Strings
+import com.hrm.codehigh.i18n.CodeBlockStrings
+import com.hrm.codehigh.i18n.LocalCodeBlockStrings
 import com.hrm.codehigh.platform.textClipEntry
 import com.hrm.codehigh.stream.IncrementalHighlighter
 import com.hrm.codehigh.theme.CodeLineKind
@@ -87,6 +88,7 @@ fun CodeBlock(
     selectable: Boolean = true
 ) {
     val highlighter = remember { IncrementalHighlighter() }
+    val strings = LocalCodeBlockStrings.current
 
     // 解析互斥：LaunchedEffect 重启时新旧协程可能并发进入 updateDetailed（无同步可变状态），串行化保护
     val parseMutex = remember { Mutex() }
@@ -220,7 +222,7 @@ fun CodeBlock(
                         modifier = Modifier.padding(end = 8.dp)
                     )
                     if (showCopyButton) {
-                        CopyButton(code = code, theme = theme)
+                        CopyButton(code = code, theme = theme, strings = strings)
                     }
                 }
             }
@@ -314,7 +316,8 @@ fun CodeBlock(
                                     if (isLastLine) {
                                         StreamingCursor(
                                             isStreaming = isStreaming,
-                                            color = theme.colorFor(TokenType.PLAIN)
+                                            color = theme.colorFor(TokenType.PLAIN),
+                                            cursorHeight = codeLineHeightDp * 0.8f
                                         )
                                     }
                                 }
@@ -330,7 +333,7 @@ fun CodeBlock(
         if (isCollapsible) {
             DisableSelection {
                 BasicText(
-                    text = if (isExpanded) Strings.collapse() else Strings.expand(totalLines - visibleLineCount),
+                    text = if (isExpanded) strings.collapse() else strings.expand(totalLines - visibleLineCount),
                     style = TextStyle(
                         color = theme.colorFor(TokenType.FUNCTION),
                         fontSize = 12.sp,
@@ -387,7 +390,8 @@ private data class LineKindStyle(
 @Composable
 internal fun CopyButton(
     code: String,
-    theme: CodeTheme
+    theme: CodeTheme,
+    strings: CodeBlockStrings,
 ) {
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
@@ -404,7 +408,7 @@ internal fun CopyButton(
 
     DisableSelection {
         BasicText(
-            text = if (copied) "✓ ${Strings.copied()}" else Strings.copy(),
+            text = if (copied) "✓ ${strings.copied()}" else strings.copy(),
             style = TextStyle(
                 color = theme.colorFor(TokenType.FUNCTION).copy(alpha = 0.8f),
                 fontSize = 11.sp,

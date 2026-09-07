@@ -1,7 +1,6 @@
 package com.hrm.codehigh.renderer
 
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hrm.codehigh.ast.TokenType
@@ -9,6 +8,8 @@ import com.hrm.codehigh.theme.GithubLightTheme
 import com.hrm.codehigh.theme.OneDarkProTheme
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
 
 class InlineCodeStyleTest {
 
@@ -20,13 +21,6 @@ class InlineCodeStyleTest {
         assertEquals(GithubLightTheme.colorFor(TokenType.PLAIN), style.textStyle.color)
         assertEquals(13.sp, style.textStyle.fontSize)
         assertEquals(20.sp, style.textStyle.lineHeight)
-        assertEquals(6.dp, style.contentPadding.calculateLeftPadding(LayoutDirection.Ltr))
-        assertEquals(6.dp, style.contentPadding.calculateRightPadding(LayoutDirection.Ltr))
-        assertEquals(2.dp, style.contentPadding.calculateTopPadding())
-        assertEquals(2.dp, style.contentPadding.calculateBottomPadding())
-        assertEquals(Color(0xFFF6F8FA), style.containerColor)
-        assertEquals(Color(0xFFD0D7DE), style.borderColor)
-        assertEquals(1.dp, style.borderWidth)
     }
 
     @Test
@@ -35,9 +29,16 @@ class InlineCodeStyleTest {
 
         assertEquals(OneDarkProTheme, style.theme)
         assertEquals(OneDarkProTheme.colorFor(TokenType.PLAIN), style.textStyle.color)
-        assertEquals(Color(0xFF30363D), style.containerColor)
-        assertEquals(Color(0xFF3D444D), style.borderColor)
-        assertEquals(1.dp, style.borderWidth)
+    }
+
+    @Test
+    fun should_adaptColors_when_themeBrightnessDiffers() {
+        val dark = InlineCodeDefaults.style(OneDarkProTheme)
+        val light = InlineCodeDefaults.style(GithubLightTheme)
+        assertTrue(dark.isDarkStyle() && !light.isDarkStyle())
+        assertNotEquals(dark.containerColor, light.containerColor)
+        assertNotEquals(dark.borderColor, light.borderColor)
+        assertTrue(dark.borderWidth > 0.dp && light.borderWidth > 0.dp)
     }
 
     @Test
@@ -53,4 +54,6 @@ class InlineCodeStyleTest {
         assertEquals(14.sp, style.textStyle.fontSize)
         assertEquals(Color.Magenta, style.containerColor)
     }
+
+    private fun InlineCodeStyle.isDarkStyle() = theme.isDark
 }

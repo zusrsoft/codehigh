@@ -10,12 +10,13 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 
 data class InlineCodeSize(
-    val width: Float,
-    val height: Float,
+    /** 宽度（像素） */
+    val widthPx: Float,
+    /** 高度（像素） */
+    val heightPx: Float,
 ) {
-    fun widthDp(density: Density): Float = with(density) { width.toDp().value }
-
-    fun heightDp(density: Density): Float = with(density) { height.toDp().value }
+    fun width(density: Density): Dp = with(density) { widthPx.toDp() }
+    fun height(density: Density): Dp = with(density) { heightPx.toDp() }
 }
 
 fun measureInlineCodeSize(
@@ -23,7 +24,8 @@ fun measureInlineCodeSize(
     style: InlineCodeStyle,
     density: Density,
     textMeasurer: androidx.compose.ui.text.TextMeasurer,
-    maxWidth: Float = Float.POSITIVE_INFINITY,
+    /** 最大可用宽度（像素） */
+    maxWidthPx: Float = Float.POSITIVE_INFINITY,
 ): InlineCodeSize {
     val annotatedString = AnnotatedString(text)
 
@@ -31,7 +33,7 @@ fun measureInlineCodeSize(
         annotatedString = annotatedString,
         textStyle = style.textStyle,
         density = density,
-        maxWidth = maxWidth,
+        maxWidthPx = maxWidthPx,
         contentPadding = style.contentPadding,
         borderWidth = style.borderWidth,
         textMeasurer = textMeasurer,
@@ -42,7 +44,7 @@ internal fun measureAnnotatedStringSize(
     annotatedString: AnnotatedString,
     textStyle: TextStyle,
     density: Density,
-    maxWidth: Float,
+    maxWidthPx: Float,
     contentPadding: PaddingValues,
     borderWidth: Dp = 0.dp,
     textMeasurer: androidx.compose.ui.text.TextMeasurer,
@@ -59,7 +61,7 @@ internal fun measureAnnotatedStringSize(
         val horizontalDecorationPx = horizontalPaddingPx + horizontalBorderPx
         val verticalDecorationPx = verticalPaddingPx + verticalBorderPx
 
-        val maxWidthWithoutDecoration = maxWidth - horizontalDecorationPx
+        val maxWidthWithoutDecoration = maxWidthPx - horizontalDecorationPx
 
         val constraints =
             if (maxWidthWithoutDecoration.isFinite() && maxWidthWithoutDecoration > 0) {
@@ -79,8 +81,8 @@ internal fun measureAnnotatedStringSize(
         )
 
         return InlineCodeSize(
-            width = layoutResult.size.width + horizontalDecorationPx,
-            height = layoutResult.size.height + verticalDecorationPx,
+            widthPx = layoutResult.size.width + horizontalDecorationPx,
+            heightPx = layoutResult.size.height + verticalDecorationPx,
         )
     }
 }

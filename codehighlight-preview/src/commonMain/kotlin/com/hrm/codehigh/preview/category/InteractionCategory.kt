@@ -254,20 +254,20 @@ internal fun InteractionCategory() {
                             InlineCode(text = inlineCodeText, style = customInlineCodeStyle)
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                "宽度: ${inlineCodeSize.width}px (${
+                                "宽度: ${inlineCodeSize.widthPx}px (${
                                     formatDpValue(
-                                        inlineCodeSize.widthDp(
+                                        inlineCodeSize.width(
                                             density
-                                        )
+                                        ).value
                                     )
                                 }dp)"
                             )
                             Text(
-                                "高度: ${inlineCodeSize.height}px (${
+                                "高度: ${inlineCodeSize.heightPx}px (${
                                     formatDpValue(
-                                        inlineCodeSize.heightDp(
+                                        inlineCodeSize.height(
                                             density
-                                        )
+                                        ).value
                                     )
                                 }dp)"
                             )
@@ -276,8 +276,8 @@ internal fun InteractionCategory() {
                     Text("使用测量结果占位的示例：")
                     Box(
                         modifier = Modifier
-                            .width(inlineCodeSize.widthDp(density).dp)
-                            .height(inlineCodeSize.heightDp(density).dp)
+                            .width(inlineCodeSize.width(density))
+                            .height(inlineCodeSize.height(density))
                             .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)),
                         contentAlignment = Alignment.Center
                     ) {
