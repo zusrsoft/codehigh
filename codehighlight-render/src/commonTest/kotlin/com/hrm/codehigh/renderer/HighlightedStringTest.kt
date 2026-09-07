@@ -33,7 +33,7 @@ class HighlightedStringTest {
     }
 
     @Test
-    fun should_reuseEqualStyle_when_typeRepeats() {
+    fun should_mergeSameValueStyle_when_differentTypesShareColor() {
         val src = "a b c"
         val tokens = listOf(
             CodeToken(TokenType.IDENTIFIER, 0 until 1, src),
@@ -41,9 +41,9 @@ class HighlightedStringTest {
             CodeToken(TokenType.IDENTIFIER, 3 until 5, src),
         )
         val s = buildHighlightedString(tokens, OneDarkProTheme)
-        assertEquals(3, s.spanStyles.size)
-        // OneDarkPro 的 IDENTIFIER 与 PLAIN 同色同样式 → 3 段 span 的 item 应相等（复用缓存实例）
-        assertEquals(s.spanStyles[0].item, s.spanStyles[2].item)
+        assertEquals(src, s.text)
+        // OneDarkPro 的 IDENTIFIER 与 PLAIN 同色 → 值相等样式跨类型合并为 1 段
+        assertEquals(1, s.spanStyles.size, "同值样式跨类型应合并")
     }
 
     @Test

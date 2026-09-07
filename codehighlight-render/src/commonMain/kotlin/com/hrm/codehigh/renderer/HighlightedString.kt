@@ -83,8 +83,8 @@ fun buildHighlightedString(
         var lastStyle: SpanStyle? = null
         for (token in tokens) {
             val style = styleFor(token.type)
-            // 引用比较：缓存保证同类型返回同一实例，相邻同实例才合并 span
-            if (style !== lastStyle) {
+            // 值比较：不同类型同色（如 IDENTIFIER/PLAIN）样式值相等也合并，span 数≈颜色段数
+            if (style != lastStyle) {
                 if (pushed) pop()
                 pushStyle(style)
                 pushed = true
