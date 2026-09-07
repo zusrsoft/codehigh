@@ -25,7 +25,7 @@ internal object DefaultCodeBlockStrings : CodeBlockStrings {
     override fun collapse(): String = if (isChinese) "▲ 收起" else "▲ Collapse"
     override fun expand(hiddenLines: Int): String {
         val n = maxOf(0, hiddenLines)
-        return if (isChinese) "▼ 展开 ($n 行)" else "▼ Expand ($n lines)"
+        return if (isChinese) "▼ 展开 ($n 行)" else "▼ Expand ($n ${if (n == 1) "line" else "lines"})"
     }
     override fun copy(): String = if (isChinese) "复制" else "Copy"
     override fun copied(): String = if (isChinese) "已复制" else "Copied"

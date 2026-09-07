@@ -9,6 +9,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 
+/**
+ * 内联代码测量尺寸（像素）。
+ * 2.0.0 破坏性重命名：原字段名 width/height，原转换方法 widthDp()/heightDp()。
+ */
 data class InlineCodeSize(
     /** 宽度（像素） */
     val widthPx: Float,
