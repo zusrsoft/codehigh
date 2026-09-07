@@ -27,11 +27,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
@@ -45,6 +43,7 @@ import com.hrm.codehigh.ast.CodeAst
 import com.hrm.codehigh.ast.CodeToken
 import com.hrm.codehigh.ast.TokenType
 import com.hrm.codehigh.i18n.Strings
+import com.hrm.codehigh.platform.textClipEntry
 import com.hrm.codehigh.stream.IncrementalHighlighter
 import com.hrm.codehigh.theme.CodeLineKind
 import com.hrm.codehigh.theme.CodeTheme
@@ -52,6 +51,8 @@ import com.hrm.codehigh.theme.LocalCodeTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /**
@@ -87,6 +88,9 @@ fun CodeBlock(
 ) {
     val highlighter = remember { IncrementalHighlighter() }
 
+    // 解析互斥：LaunchedEffect 重启时新旧协程可能并发进入 updateDetailed（无同步可变状态），串行化保护
+    val parseMutex = remember { Mutex() }
+
     var isExpanded by remember { mutableStateOf(false) }
 
     // CRLF 归一化（Windows 剪贴板常见）；行拆分记忆化，流式高频重组下避免 O(n) 重分配
@@ -120,21 +124,23 @@ fun CodeBlock(
     var renderedStyleInputs by remember { mutableStateOf<Pair<CodeTheme, Set<Int>>?>(null) }
     LaunchedEffect(visibleCode, language, theme, highlightedLines) {
         val result = withContext(Dispatchers.Default) {
-            val detailed = highlighter.updateDetailed(visibleCode, language)
-            val lastInputs = renderedStyleInputs
-            val styleChanged = lastInputs == null ||
-                lastInputs.first != theme ||
-                lastInputs.second != highlightedLines
-            if (!detailed.hasChange && !styleChanged) {
-                null // 无变化（缓存命中且样式输入未变）：保留现有渲染结果
-            } else {
-                detailed.ast to buildLineRenders(
-                    sourceLines = visibleLines,
-                    tokens = detailed.ast.tokens,
-                    theme = theme,
-                    language = language,
-                    highlightedLines = highlightedLines,
-                )
+            parseMutex.withLock {
+                val detailed = highlighter.updateDetailed(visibleCode, language)
+                val lastInputs = renderedStyleInputs
+                val styleChanged = lastInputs == null ||
+                    lastInputs.first != theme ||
+                    lastInputs.second != highlightedLines
+                if (!detailed.hasChange && !styleChanged) {
+                    null // 无变化（缓存命中且样式输入未变）：保留现有渲染结果
+                } else {
+                    detailed.ast to buildLineRenders(
+                        sourceLines = visibleLines,
+                        tokens = detailed.ast.tokens,
+                        theme = theme,
+                        language = language,
+                        highlightedLines = highlightedLines,
+                    )
+                }
             }
         }
         if (result != null) {
@@ -374,8 +380,10 @@ private data class LineKindStyle(
 /**
  * 复制按钮组件。
  * 标记为 internal，仅供 CodeBlock 内部使用。
+ *
+ * 复制内容为原始 [code]（未做 CRLF 归一化），与渲染路径的归一化分离是有意为之：
+ * 用户复制时期望得到与原始输入逐字节一致的文本。
  */
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 internal fun CopyButton(
     code: String,
@@ -406,7 +414,7 @@ internal fun CopyButton(
                 .padding(4.dp)
                 .clickable {
                     scope.launch {
-                        clipboard.setClipEntry(ClipEntry(AnnotatedString(code)))
+                        clipboard.setClipEntry(textClipEntry(code))
                     }
                     copyCount++
                 }
