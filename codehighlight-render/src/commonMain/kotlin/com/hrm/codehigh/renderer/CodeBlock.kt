@@ -2,36 +2,46 @@ package com.hrm.codehigh.renderer
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.selection.DisableSelection
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.hrm.codehigh.ast.CodeAst
 import com.hrm.codehigh.ast.CodeToken
 import com.hrm.codehigh.ast.TokenType
 import com.hrm.codehigh.i18n.Strings
@@ -39,7 +49,10 @@ import com.hrm.codehigh.stream.IncrementalHighlighter
 import com.hrm.codehigh.theme.CodeLineKind
 import com.hrm.codehigh.theme.CodeTheme
 import com.hrm.codehigh.theme.LocalCodeTheme
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * 代码块渲染组件，唯一对外渲染入口。
@@ -52,8 +65,9 @@ import kotlinx.coroutines.delay
  * @param theme 代码主题，默认使用 LocalCodeTheme
  * @param showLineNumbers 是否显示行号
  * @param showCopyButton 是否显示复制按钮
- * @param maxVisibleLines 最大可见行数，超出时显示折叠按钮（null 表示不限制）
+ * @param maxVisibleLines 最大可见行数，默认 500 行，超出折叠；null 不限制
  * @param onTokenClick Token 点击回调
+ * @param selectable 正文是否可选中复制；SelectionContainer 有一定开销，长列表可关闭
  */
 @Composable
 fun CodeBlock(
@@ -67,43 +81,87 @@ fun CodeBlock(
     startLine: Int = 1,
     highlightedLines: Set<Int> = emptySet(),
     showCopyButton: Boolean = true,
-    maxVisibleLines: Int? = null,
-    onTokenClick: ((CodeToken) -> Unit)? = null
+    maxVisibleLines: Int? = 500,
+    onTokenClick: ((CodeToken) -> Unit)? = null,
+    selectable: Boolean = true
 ) {
-    val highlighter = remember(language) { IncrementalHighlighter() }
+    val highlighter = remember { IncrementalHighlighter() }
 
     var isExpanded by remember { mutableStateOf(false) }
-    val lines = code.split("\n")
+
+    // CRLF 归一化（Windows 剪贴板常见）；行拆分记忆化，流式高频重组下避免 O(n) 重分配
+    val normalizedCode = remember(code) {
+        if (code.contains('\r')) code.replace("\r\n", "\n").replace("\r", "\n") else code
+    }
+    val lines = remember(normalizedCode) { normalizedCode.split("\n") }
     val totalLines = lines.size
     val isCollapsible = maxVisibleLines != null && totalLines > maxVisibleLines
     val visibleLineCount = when {
         !isCollapsible || isExpanded -> totalLines
-        else -> maxVisibleLines // isCollapsible 为 true 时 maxVisibleLines 一定非空
+        else -> maxVisibleLines // isCollapsible 为 true 时必非空（编译器可智能转换）
+    }
+    val visibleLines = remember(visibleLineCount, lines) { lines.take(visibleLineCount) }
+    val visibleCode = remember(visibleLines) { visibleLines.joinToString("\n") }
+    // 各行在 visibleCode 中的起始字符偏移（onTokenClick 定位用）
+    val lineCharOffsets = remember(visibleLines) {
+        IntArray(visibleLines.size).also { acc ->
+            var off = 0
+            for (i in visibleLines.indices) {
+                acc[i] = off
+                off += visibleLines[i].length + 1
+            }
+        }
     }
 
-    val visibleLines = lines.take(visibleLineCount)
-    val visibleCode = visibleLines.joinToString("\n")
-    val visibleAst = remember(visibleCode, language) { highlighter.update(visibleCode, language) }
-    val lineHighlights = remember(visibleAst, theme, language, highlightedLines, visibleLineCount) {
-        buildLineRenders(
-            sourceLines = visibleLines,
-            tokens = visibleAst.tokens,
-            theme = theme,
-            language = language,
-            highlightedLines = highlightedLines,
-        )
+    // 初始 null：首帧先渲染纯文本，解析在后台线程完成后替换（大文件不阻塞组合）
+    var lineHighlights by remember { mutableStateOf<List<CodeLineRender>?>(null) }
+    var visibleAst by remember { mutableStateOf<CodeAst?>(null) }
+    // 上次行渲染使用的样式输入（theme + 高亮行）：样式输入变化时即使代码未变也需重建行渲染
+    var renderedStyleInputs by remember { mutableStateOf<Pair<CodeTheme, Set<Int>>?>(null) }
+    LaunchedEffect(visibleCode, language, theme, highlightedLines) {
+        val result = withContext(Dispatchers.Default) {
+            val detailed = highlighter.updateDetailed(visibleCode, language)
+            val lastInputs = renderedStyleInputs
+            val styleChanged = lastInputs == null ||
+                lastInputs.first != theme ||
+                lastInputs.second != highlightedLines
+            if (!detailed.hasChange && !styleChanged) {
+                null // 无变化（缓存命中且样式输入未变）：保留现有渲染结果
+            } else {
+                detailed.ast to buildLineRenders(
+                    sourceLines = visibleLines,
+                    tokens = detailed.ast.tokens,
+                    theme = theme,
+                    language = language,
+                    highlightedLines = highlightedLines,
+                )
+            }
+        }
+        if (result != null) {
+            visibleAst = result.first
+            lineHighlights = result.second
+            renderedStyleInputs = theme to highlightedLines
+        }
     }
-    val fallbackToPlainLines = remember(lineHighlights, visibleLines) {
+    val plainLines = remember(visibleLines) {
+        visibleLines.map { CodeLineRender(AnnotatedString(it), CodeLineKind.NORMAL) }
+    }
+    val resolvedLines = lineHighlights ?: plainLines
+    val fallbackToPlainLines = remember(resolvedLines, visibleLines) {
         visibleLines.isNotEmpty() && (
-            lineHighlights.isEmpty() ||
-                lineHighlights.size < visibleLines.size ||
-                lineHighlights.all { it.text.text.isBlank() }
+            resolvedLines.isEmpty() ||
+                resolvedLines.size < visibleLines.size ||
+                resolvedLines.all { it.text.text.isBlank() }
             )
     }
     val showToolbar = title.isNotBlank() || language.isNotBlank() || showCopyButton
     val density = LocalDensity.current
     val codeLineHeight = 20.sp
     val codeLineHeightDp = with(density) { codeLineHeight.toDp() }
+    // 行号宽度随最大行号位数动态调整（40.dp 固定宽在 4 位数行号下会截断）
+    val lineNumberWidth = remember(totalLines) {
+        ((totalLines.toString().length.coerceAtLeast(2)) * 8 + 8).dp
+    }
     val lineNumberStyle = remember(theme) {
         TextStyle(
             color = theme.colorFor(TokenType.COMMENT).copy(alpha = 0.5f),
@@ -121,6 +179,19 @@ fun CodeBlock(
             lineHeight = codeLineHeight
         )
     }
+    // 每行 diff 样式缓存：避免逐行重复 when 分支与 TextStyle 分配
+    val lineKindStyles = remember(theme) {
+        CodeLineKind.entries.associateWith { kind ->
+            LineKindStyle(
+                textStyle = theme.textStyleForLine(kind),
+                markerColor = theme.diffMarkerColor(kind),
+                markerBackground = theme.diffMarkerBackground(kind),
+                lineBackground = theme.backgroundForLine(kind),
+            )
+        }
+    }
+    // onTokenClick 定位用：行 -> 文本布局结果
+    val tokenClickLayouts = remember { mutableMapOf<Int, TextLayoutResult>() }
 
     Column(
         modifier = modifier
@@ -156,88 +227,97 @@ fun CodeBlock(
                 .fillMaxWidth()
                 .horizontalScroll(horizontalScrollState)
         ) {
-            Column(
-                modifier = Modifier.padding(vertical = 8.dp)
-            ) {
-                val renderedLines = if (fallbackToPlainLines) {
-                    visibleLines.map { line ->
-                        CodeLineRender(
-                            kind = CodeLineKind.NORMAL,
-                            text = AnnotatedString(line),
-                        )
-                    }
-                } else {
-                    lineHighlights
-                }
-                renderedLines.forEachIndexed { index, lineRender ->
-                    key(index) {
-                        val isLastLine = index == renderedLines.lastIndex
-                        val diffMarker = diffMarkerForLine(lineRender.kind)
-                        val rawLine = visibleLines.getOrElse(index) { "" }
-                        val displayText = if (lineRender.text.text.isEmpty() && rawLine.isNotEmpty()) {
-                            AnnotatedString(rawLine)
-                        } else {
-                            lineRender.text
-                        }
-                        Row(
-                            modifier = Modifier.height(codeLineHeightDp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            if (showLineNumbers) {
-                                DisableSelection {
-                                    BasicText(
-                                        text = (startLine + index).toString(),
-                                        style = lineNumberStyle,
-                                        modifier = Modifier
-                                            .width(40.dp)
-                                            .padding(end = 8.dp),
-                                        maxLines = 1
-                                    )
-                                    Box(
-                                        modifier = Modifier
-                                            .width(1.dp)
-                                            .height(codeLineHeightDp)
-                                            .background(
-                                                theme.colorFor(TokenType.COMMENT)
-                                                    .copy(alpha = 0.3f)
-                                            )
-                                    )
-                                }
+            val linesContent: @Composable () -> Unit = {
+                Column(
+                    modifier = Modifier.padding(vertical = 8.dp)
+                ) {
+                    val renderedLines = if (fallbackToPlainLines) plainLines else resolvedLines
+                    renderedLines.forEachIndexed { index, lineRender ->
+                        key(index) {
+                            val isLastLine = index == renderedLines.lastIndex
+                            val diffMarker = diffMarkerForLine(lineRender.kind)
+                            val rawLine = visibleLines.getOrElse(index) { "" }
+                            val displayText = if (lineRender.text.text.isEmpty() && rawLine.isNotEmpty()) {
+                                AnnotatedString(rawLine)
+                            } else {
+                                lineRender.text
                             }
-
+                            val kindStyle = lineKindStyles.getValue(lineRender.kind)
                             Row(
-                                modifier = Modifier
-                                    .background(theme.backgroundForLine(lineRender.kind))
-                                    .padding(horizontal = 12.dp),
-                                verticalAlignment = Alignment.Bottom
+                                modifier = Modifier.heightIn(min = codeLineHeightDp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                if (diffMarker != null) {
-                                    BasicText(
-                                        text = diffMarker,
-                                        style = diffMarkerStyle.copy(
-                                            color = theme.diffMarkerColorForLine(lineRender.kind)
-                                        ),
-                                        modifier = Modifier
-                                            .background(theme.diffMarkerBackgroundForLine(lineRender.kind))
-                                            .padding(horizontal = 6.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
+                                if (showLineNumbers) {
+                                    DisableSelection {
+                                        BasicText(
+                                            text = (startLine + index).toString(),
+                                            style = lineNumberStyle,
+                                            modifier = Modifier
+                                                .width(lineNumberWidth)
+                                                .padding(end = 8.dp),
+                                            maxLines = 1
+                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .width(1.dp)
+                                                .height(codeLineHeightDp)
+                                                .background(
+                                                    theme.colorFor(TokenType.COMMENT)
+                                                        .copy(alpha = 0.3f)
+                                                )
+                                        )
+                                    }
                                 }
-                                BasicText(
-                                    text = displayText,
-                                    style = theme.textStyleForLine(lineRender.kind)
-                                )
-                                if (isLastLine) {
-                                    StreamingCursor(
-                                        isStreaming = isStreaming,
-                                        color = theme.colorFor(TokenType.PLAIN)
+
+                                Row(
+                                    modifier = Modifier
+                                        .background(kindStyle.lineBackground)
+                                        .padding(horizontal = 12.dp),
+                                    verticalAlignment = Alignment.Bottom
+                                ) {
+                                    if (diffMarker != null) {
+                                        BasicText(
+                                            text = diffMarker,
+                                            style = diffMarkerStyle.copy(
+                                                color = kindStyle.markerColor
+                                            ),
+                                            modifier = Modifier
+                                                .background(kindStyle.markerBackground)
+                                                .padding(horizontal = 6.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                    }
+                                    BasicText(
+                                        text = displayText,
+                                        style = kindStyle.textStyle,
+                                        onTextLayout = { tokenClickLayouts[index] = it },
+                                        modifier = (if (onTokenClick != null) {
+                                            Modifier.pointerInput(onTokenClick, index) {
+                                                detectTapGestures { press ->
+                                                    val layout = tokenClickLayouts[index]
+                                                        ?: return@detectTapGestures
+                                                    val charOffset = layout.getOffsetForPosition(press)
+                                                    val absolute = (lineCharOffsets.getOrElse(index) { 0 }) + charOffset
+                                                    val ast = visibleAst ?: return@detectTapGestures
+                                                    ast.tokens.firstOrNull { absolute in it.range }
+                                                        ?.let(onTokenClick)
+                                                }
+                                            }
+                                        } else Modifier),
                                     )
+                                    if (isLastLine) {
+                                        StreamingCursor(
+                                            isStreaming = isStreaming,
+                                            color = theme.colorFor(TokenType.PLAIN)
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
+            if (selectable) SelectionContainer { linesContent() } else linesContent()
         }
 
         // 折叠/展开按钮
@@ -267,66 +347,50 @@ private fun diffMarkerForLine(kind: CodeLineKind): String? = when (kind) {
     else -> null
 }
 
-private fun CodeTheme.diffMarkerBackgroundForLine(kind: CodeLineKind) = when (kind) {
-    CodeLineKind.DIFF_ADDED -> if (isDark) androidx.compose.ui.graphics.Color(0xFF224D35) else androidx.compose.ui.graphics.Color(0xFFD9F5E0)
-    CodeLineKind.DIFF_REMOVED -> if (isDark) androidx.compose.ui.graphics.Color(0xFF5A2730) else androidx.compose.ui.graphics.Color(0xFFFADADD)
-    CodeLineKind.DIFF_META_HEADER -> if (isDark) androidx.compose.ui.graphics.Color(0xFF374151) else androidx.compose.ui.graphics.Color(0xFFE5E7EB)
-    CodeLineKind.DIFF_META_HUNK -> if (isDark) androidx.compose.ui.graphics.Color(0xFF1F4B70) else androidx.compose.ui.graphics.Color(0xFFDCEEFF)
-    else -> androidx.compose.ui.graphics.Color.Transparent
-}
-
-private fun CodeTheme.diffMarkerColorForLine(kind: CodeLineKind) = when (kind) {
-    CodeLineKind.DIFF_ADDED -> if (isDark) androidx.compose.ui.graphics.Color(0xFF9BE9A8) else androidx.compose.ui.graphics.Color(0xFF1F7A38)
-    CodeLineKind.DIFF_REMOVED -> if (isDark) androidx.compose.ui.graphics.Color(0xFFFFA8B5) else androidx.compose.ui.graphics.Color(0xFFB42318)
-    CodeLineKind.DIFF_META_HEADER -> if (isDark) androidx.compose.ui.graphics.Color(0xFFD1D5DB) else androidx.compose.ui.graphics.Color(0xFF4B5563)
-    CodeLineKind.DIFF_META_HUNK -> if (isDark) androidx.compose.ui.graphics.Color(0xFF9CDCFE) else androidx.compose.ui.graphics.Color(0xFF0958D9)
-    else -> colorFor(TokenType.PLAIN)
-}
-
-private fun CodeTheme.textColorForLine(kind: CodeLineKind) = when (kind) {
-    CodeLineKind.DIFF_META_HEADER -> if (isDark) androidx.compose.ui.graphics.Color(0xFFE5E7EB) else androidx.compose.ui.graphics.Color(0xFF374151)
-    CodeLineKind.DIFF_META_HUNK -> if (isDark) androidx.compose.ui.graphics.Color(0xFFBFE3FF) else androidx.compose.ui.graphics.Color(0xFF0B4F8A)
-    else -> colorFor(TokenType.PLAIN)
-}
-
-private fun CodeTheme.fontWeightForLine(kind: CodeLineKind) = when (kind) {
-    CodeLineKind.DIFF_META_HEADER, CodeLineKind.DIFF_META_HUNK -> FontWeight.SemiBold
-    else -> FontWeight.Normal
-}
-
 private fun CodeTheme.textStyleForLine(kind: CodeLineKind) = when (kind) {
     CodeLineKind.DIFF_META_HEADER, CodeLineKind.DIFF_META_HUNK -> TextStyle(
-        color = textColorForLine(kind),
+        color = diffTextColor(kind),
         fontSize = 13.sp,
         fontFamily = FontFamily.Monospace,
-        fontWeight = fontWeightForLine(kind),
+        fontWeight = FontWeight.SemiBold,
         lineHeight = 20.sp
     )
     else -> TextStyle(
-        color = textColorForLine(kind),
+        color = diffTextColor(kind),
         fontSize = 13.sp,
         fontFamily = FontFamily.Monospace,
+        fontWeight = FontWeight.Normal,
         lineHeight = 20.sp
     )
 }
+
+private data class LineKindStyle(
+    val textStyle: TextStyle,
+    val markerColor: Color,
+    val markerBackground: Color,
+    val lineBackground: Color,
+)
 
 /**
  * 复制按钮组件。
  * 标记为 internal，仅供 CodeBlock 内部使用。
  */
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 internal fun CopyButton(
     code: String,
     theme: CodeTheme
 ) {
-    @Suppress("DEPRECATION")
-    val clipboardManager = LocalClipboardManager.current
-    var copied by remember { mutableStateOf(false) }
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
+    // 计数器而非布尔：快速连点时 LaunchedEffect(copyCount) 重启，计时窗从最后一次点击重新起算
+    var copyCount by remember { mutableStateOf(0) }
+    val copied = copyCount > 0
 
-    LaunchedEffect(copied) {
-        if (copied) {
+    LaunchedEffect(copyCount) {
+        if (copyCount > 0) {
             delay(2000)
-            copied = false
+            copyCount = 0
         }
     }
 
@@ -341,9 +405,10 @@ internal fun CopyButton(
             modifier = Modifier
                 .padding(4.dp)
                 .clickable {
-                    @Suppress("DEPRECATION")
-                    clipboardManager.setText(AnnotatedString(code))
-                    copied = true
+                    scope.launch {
+                        clipboard.setClipEntry(ClipEntry(AnnotatedString(code)))
+                    }
+                    copyCount++
                 }
         )
     }
