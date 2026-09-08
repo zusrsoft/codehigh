@@ -1,35 +1,39 @@
-﻿# CodeHigh 璇勫闂鍏ㄩ噺淇瀹炴柦璁″垝
+# CodeHigh 评审问题全量修复实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 淇娣卞害璇勫鍙戠幇鐨勫叏閮ㄥ叿浣撻棶棰橈細2 涓穿婧?閿欎贡绾х己闄枫€佹祦寮忔覆鏌撴€ц兘銆佸閲忓紩鎿庢纭€с€佹祴璇曚吉瑕嗙洊銆佹瀯寤哄伐绋嬪寲缂哄彛銆?
-**Architecture:** parser 灞傚厛琛岋紙CodeToken API 鐮村潖鎬у彉鏇翠负 2.0.0锛夛紝Lexer 鎺ュ彛澧炲姞澧為噺鍗忓晢濂戠害锛坄tokenize(code, startOffset)` / `isExtendableToken`锛夛紝IncrementalHighlighter 娑堣垂璇ュ绾︼紱render 灞傞殢鍚庯紙寮傛瑙ｆ瀽銆乷nTokenClick 瀹炵幇銆佸閲忚烦杩囬噸寤恒€佺ǔ瀹氭€ф敞瑙ｏ級锛涙渶鍚庢瀯寤?CI/鏂囨。銆備袱涓ぇ閲嶆瀯锛堣瘝娉曞櫒澹版槑寮忔敹鏁涖€佸唴閮?LazyColumn锛夌粡鐢ㄦ埛鍐崇瓥鏄庣‘**璺宠繃**銆?
-**Tech Stack:** Kotlin Multiplatform 2.3.20銆丆ompose Multiplatform 1.10.3銆丟radle 9.3.1銆丄GP 9.1.1銆乿anniktech 0.36銆?
-**绾﹀畾锛?*
-- 鍛戒护鍧囧湪浠撳簱鏍?`D:\dev-java-learn-2026-ai\huarangmeng-zusrsoft\codehigh` 涓嬩互 PowerShell 鎵ц锛実radle 鍛戒护缁熶竴鍐欎綔 `.\gradlew.bat <task>`銆?- 蹇€熷洖褰掑懡浠わ細`.\gradlew.bat :codehighlight-parser:jvmTest :codehighlight-render:jvmTest --console=plain`锛堜笅鏂囩畝绉?REGRESS锛夈€?- 鎻愪氦淇℃伅椋庢牸娌跨敤浠撳簱鐜扮姸锛堜腑鏂?+ `fix:`/`feat:`/`test:`/`chore:` 鍓嶇紑锛夈€?- 鐗堟湰鍙峰崌绾т负 **2.0.0**锛堢牬鍧忔€у彉鏇达細CodeToken 鏋勯€犵鍚嶃€両nlineCodeSize 瀛楁鍚嶏級锛屽湪 T12 钀藉湴銆?
+**Goal:** 修复深度评审发现的全部具体问题：2 个崩溃、错乱级缺陷、流式渲染性能、增量引擎正确性、测试伪覆盖、构建工程化缺口。
+**Architecture:** parser 层先行（CodeToken API 破坏性变更为 2.0.0），Lexer 接口增加增量协商契约（`tokenize(code, startOffset)` / `isExtendableToken`），IncrementalHighlighter 消费该契约；render 层随后（异步解析、onTokenClick 实现、增量跳过重建、稳定性注解）；最后构建CI/文档。两个大重构（词法器声明式收敛、内层LazyColumn）经用户决策明确**跳过**。
+**Tech Stack:** Kotlin Multiplatform 2.3.20、Compose Multiplatform 1.10.3、Gradle 9.3.1、AGP 9.1.1、vanniktech 0.36。
+**约定：**
+- 命令均在仓库根`D:\dev-java-learn-2026-ai\huarangmeng-zusrsoft\codehigh` 下以 PowerShell 执行，gradle 命令统一写作 `.\gradlew.bat <task>`。
+- 快速回归命令：`.\gradlew.bat :codehighlight-parser:jvmTest :codehighlight-render:jvmTest --console=plain`（下文简称REGRESS）。
+- 提交信息风格沿用仓库现状（中文+ `fix:`/`feat:`/`test:`/`chore:` 前缀）。
+- 版本号升级为 **2.0.0**（破坏性变更：CodeToken 构造签名、InlineCodeSize 字段名），在 T12 落地。
 ---
 
-### Task 1: CodeToken 鎯版€?text 閲嶆瀯锛堢牬鍧忔€?API 鍙樻洿锛?
+### Task 1: CodeToken 惰性text 重构（破坏性API 变更）
 **Files:**
-- Modify: `codehighlight-parser/src/commonMain/kotlin/com/hrm/codehigh/ast/CodeToken.kt`锛堝叏鏂囦欢鏇挎崲锛?- Modify: 鍏ㄩ儴璇嶆硶鍣ㄦ瀯閫犵偣锛堣姝ラ 3 娓呭崟涓庢浛鎹㈣鍒欙級
-- Modify: `codehighlight-parser/src/commonMain/kotlin/com/hrm/codehigh/lexer/BaseLexer.kt`锛堝垹闄ゆ浠ｇ爜 TokenBuilder锛?- Modify: `codehighlight-render/src/commonMain/kotlin/com/hrm/codehigh/renderer/HighlightedString.kt:46-107`锛堝垹闄ゆ浠ｇ爜 buildLineRendersFromOffset/toRelativeTokens锛?- Modify: `codehighlight-render/src/commonTest/kotlin/com/hrm/codehigh/renderer/CodeLineRenderTest.kt`锛堟瀯閫犵偣杩佺Щ锛?
-- [ ] **Step 1: 閲嶅啓 CodeToken.kt**
+- Modify: `codehighlight-parser/src/commonMain/kotlin/com/hrm/codehigh/ast/CodeToken.kt`（全文件替换）- Modify: 全部词法器构造点（见步骤 3 清单与替换规则）
+- Modify: `codehighlight-parser/src/commonMain/kotlin/com/hrm/codehigh/lexer/BaseLexer.kt`（删除死代码 TokenBuilder）- Modify: `codehighlight-render/src/commonMain/kotlin/com/hrm/codehigh/renderer/HighlightedString.kt:46-107`（删除死代码 buildLineRendersFromOffset/toRelativeTokens）- Modify: `codehighlight-render/src/commonTest/kotlin/com/hrm/codehigh/renderer/CodeLineRenderTest.kt`（构造点迁移）
+- [ ] **Step 1: 重写 CodeToken.kt**
 
 ```kotlin
 package com.hrm.codehigh.ast
 
 /**
- * 浠ｇ爜 Token 鏁版嵁缁撴瀯锛岃〃绀鸿瘝娉曞垎鏋愬悗鐨勬渶灏忚涔夊崟鍏冦€? * 鎯版€ф寔鏈夋簮鏂囨湰寮曠敤锛屼粎鍦ㄨ闂?[text] 鏃跺垏鐗囷紝閬垮厤閫?Token 鍏ㄩ噺鎷疯礉婧愮爜銆? *
- * 绛夊€艰涔変粎姣旇緝 [type] 涓?[range]锛泃ext 闇€瑕佹椂鏄惧紡鏂█銆? *
- * @param type Token 绫诲瀷
- * @param range Token 鍦ㄦ簮鏂囨湰涓殑浣嶇疆鑼冨洿锛堢浉瀵?[source] 浠?0 璁★級
- * @param source 婧愭枃鏈紩鐢? */
+ * 代码 Token 数据结构，表示词法分析后的最小语义单元。
+ * 惰性持有源文本引用，仅在访问[text] 时切片，避免每Token 全量拷贝源码。 *
+ * 等值语义仅比较 [type] 与[range]；text 需要时显式断言。 *
+ * @param type Token 类型
+ * @param range Token 在源文本中的位置范围（相对[source] 从0 计）
+ * @param source 源文本引用。 */
 class CodeToken(
     val type: TokenType,
     val range: IntRange,
     val source: CharSequence,
 ) {
-    /** Token 鍘熷鏂囨湰锛屾儼鎬у垏鐗?*/
+    /** Token 原始文本，惰性切片*/
     val text: String by lazy(LazyThreadSafetyMode.NONE) {
         source.subSequence(range.first, range.last + 1).toString()
     }
@@ -47,40 +51,40 @@ class CodeToken(
 }
 ```
 
-- [ ] **Step 2: 鍏ㄤ粨搴撴浛鎹㈡瀯閫犵偣锛? 绉嶅舰鎬侊級**
+- [ ] **Step 2: 全仓库替换构造点（3 种形态）**
 
-鐢ㄧ紪杈戝伐鍏锋垨 PowerShell 鎵归噺澶勭悊锛岃鍒欙紙`X`/`A`/`B` 涓轰换鎰忚〃杈惧紡锛夛細
-1. `CodeToken(X, code.substring(A, B), A until B)` 鈫?`CodeToken(X, A until B, code)`锛堟敞鎰忥細substring 涓?until 鐨勪袱涓弬鏁伴€氬父鐩稿悓琛ㄨ揪寮忥紱鑻ヤ笉鍚岋紙濡?`start..end`锛夛紝瑙勫垯涓?`CodeToken(X, code.substring(A, B), C)` 鈫?`CodeToken(X, C, code)`锛?2. `CodeToken(type, word, start until pos)` 鈫?`CodeToken(type, start until pos, code)`锛坵ord 绫诲眬閮ㄥ彉閲忓舰鎬侊級
-3. `CodeToken(TokenType.PLAIN, c.toString(), pos until pos + 1)` 鈫?`CodeToken(TokenType.PLAIN, pos until pos + 1, code)`
+用编辑工具或 PowerShell 批量处理，规则（`X`/`A`/`B` 为任意表达式）：
+1. `CodeToken(X, code.substring(A, B), A until B)` →`CodeToken(X, A until B, code)`（注意：substring 与until 的两个参数通常相同表达式；若不同（如`start..end`），规则为`CodeToken(X, code.substring(A, B), C)` →`CodeToken(X, C, code)`；2. `CodeToken(type, word, start until pos)` →`CodeToken(type, start until pos, code)`（word 类局部变量形态）
+3. `CodeToken(TokenType.PLAIN, c.toString(), pos until pos + 1)` → `CodeToken(TokenType.PLAIN, pos until pos + 1, code)`
 
-娑夊強鏂囦欢锛坓rep `CodeToken(` 楠岃瘉鏃犻仐婕忥級锛歚lexer/` 鐩綍鍏ㄩ儴 24 涓?.kt锛圞otlinLexer銆丳ythonLexer銆丣avaLexer銆丣avaScriptLexer銆乀ypeScriptLexer銆丟oLexer銆丷ustLexer銆丼wiftLexer銆丆Lexer銆丆ssLexer銆丣sonLexer銆乊amlLexer銆乀omlLexer銆丼qlLexer銆乆mlLexer锛堝惈 HtmlLexer锛夈€丅ashLexer銆丏iffLexer銆丏artLexer銆丼calaLexer銆丩uaLexer銆丠askellLexer銆丒lixirLexer銆丷LangLexer銆丳hpLexer锛夈€乣lexer/ConfigurableLexer.kt`銆乣lexer/BaseLexer.kt`锛圱okenBuilder 鍐呴儴鈥斺€旇鏂囦欢鏈换鍔″皢鍒犻櫎澶ч儴鍒嗭級銆乣lexer/LanguageRegistry.kt` 鏃犳瀯閫犵偣銆乣stream/IncrementalHighlighter.kt:104-110`锛坉irtyTokens map鈥斺€旀敼涓?`CodeToken(token.type, (token.range.first + reparseStart)..(token.range.last + reparseStart), newCode)`锛屼笉鍐嶉渶瑕?text 浼犻€掞級銆?娉ㄦ剰锛氬悇璇嶆硶鍣ㄦ枃浠跺唴灞€閮ㄥ彉閲忓悕鍙兘鏄?`code` 浠ュ鐨勫悕瀛楋紙濡?`input`锛夛紝鏇挎崲鏃朵繚鎸佹簮鍙橀噺鍚嶄竴鑷淬€?
-- [ ] **Step 3: 鍒犻櫎姝讳唬鐮?*
+涉及文件（grep `CodeToken(` 验证无遗漏）：`lexer/` 目录全部 24 个.kt（KotlinLexer、PythonLexer、JavaLexer、JavaScriptLexer、TypeScriptLexer、GoLexer、RustLexer、SwiftLexer、CLexer、CssLexer、JsonLexer、YamlLexer、TomlLexer、SqlLexer、XmlLexer（含 HtmlLexer）、BashLexer、DiffLexer、DartLexer、ScalaLexer、LuaLexer、HaskellLexer、ElixirLexer、RLangLexer、PhpLexer）、`lexer/ConfigurableLexer.kt`、`lexer/BaseLexer.kt`（TokenBuilder 内部——该文件本任务将删除大部分）、`lexer/LanguageRegistry.kt` 无构造点、`stream/IncrementalHighlighter.kt:104-110`（dirtyTokens map——改为`CodeToken(token.type, (token.range.first + reparseStart)..(token.range.last + reparseStart), newCode)`，不再需要text 传递）。注意：各词法器文件内局部变量名可能是`code` 以外的名字（如`input`），替换时保持源变量名一致。
+- [ ] **Step 3: 删除死代码*
 
-`BaseLexer.kt` 鍏ㄦ枃浠舵浛鎹负锛?
+`BaseLexer.kt` 全文件替换为：
 ```kotlin
 package com.hrm.codehigh.lexer
 
 /**
- * 璇嶆硶鍒嗘瀽鍣ㄥ熀纭€宸ュ叿绫汇€? * 鏍囪涓?internal锛屼粎渚涙ā鍧楀唴閮ㄤ娇鐢ㄣ€? */
+ * 词法分析器基础工具类。 * 标记为internal，仅供模块内部使用。 */
 internal abstract class BaseLexer : Lexer
 ```
 
-`HighlightedString.kt`锛氬垹闄?`buildLineRendersFromOffset`锛?6-86 琛岋級涓?`toRelativeTokens`锛?8-107 琛岋級涓や釜鍑芥暟锛宍buildLineRenders` 鍘熸湁鍙傛暟涓嶅彉銆佸嚱鏁颁綋鏀逛负鐩存帴鎵ц鍘?FromOffset 鐗堟湰鍦?startLineIndex=0/startCharOffset=0 鏃剁殑閫昏緫锛堝嵆锛氶亶鍘?sourceLines銆佸 buildHighlightedString 浜х墿鎸夎鍒囩墖銆乺esolveLineKind锛夈€?
-- [ ] **Step 4: 杩佺Щ CodeLineRenderTest 鏋勯€犵偣**
+`HighlightedString.kt`：删除`buildLineRendersFromOffset`（46-86 行）、`toRelativeTokens`（78-107 行）两个函数，`buildLineRenders` 原有参数不变、函数体改为直接执行原FromOffset 版本在startLineIndex=0/startCharOffset=0 时的逻辑（即：遍历sourceLines、对 buildHighlightedString 产物按行切片、resolveLineKind）。
+- [ ] **Step 4: 迁移 CodeLineRenderTest 构造点**
 
-灏?`CodeToken(TokenType.KEYWORD, "fun", 0 until 3)` 绛夋敼涓?`CodeToken(TokenType.KEYWORD, 0 until 3, src)`锛屽苟鍦ㄦ祴璇曟柟娉曞紑澶村畾涔?`val src = "fun hello()\nprintln(\"ok\")\nreturn"`锛? 琛屾簮鏂囨湰鎷兼帴锛屽悇 token 鐨?text 鍗充负鍏跺垏鐗囷級銆傛柇瑷€涓嶅彉锛坄.text` 浠嶅彲鐢級銆?
-- [ ] **Step 5: REGRESS 楠岃瘉閫氳繃**
+将`CodeToken(TokenType.KEYWORD, "fun", 0 until 3)` 等改为`CodeToken(TokenType.KEYWORD, 0 until 3, src)`，并在测试方法开头定义`val src = "fun hello()\nprintln(\"ok\")\nreturn"`3 行源文本拼接，各 token 的text 即为其切片）。断言不变（`.text` 仍可用）。
+- [ ] **Step 5: REGRESS 验证通过**
 
-- [ ] **Step 6: Commit** `feat: CodeToken 鎯版€?text 閲嶆瀯锛屾秷闄ら€?Token 婧愮爜鎷疯礉锛?.0.0 鐮村潖鎬у彉鏇达級`
+- [ ] **Step 6: Commit** `feat: CodeToken 惰性text 重构，消除每Token 源码拷贝（2.0.0 破坏性变更）`
 
 ---
 
-### Task 2: 璇嶆硶鍣ㄨ浆涔夎秺鐣屼慨澶?+ 绌虹櫧鍚堝苟 + 鍙傛暟鍖栧洖褰掓祴璇?
+### Task 2: 词法器转义越界修复+ 空白合并 + 参数化回归测试
 **Files:**
 - Create: `codehighlight-parser/src/commonTest/kotlin/com/hrm/codehigh/lexer/EscapeBoundsTest.kt`
-- Modify: 14 涓瘝娉曞櫒鏂囦欢鐨勮浆涔夎锛堟楠?2 娓呭崟锛変笌 PLAIN 鍏滃簳鍒嗘敮
-- Modify: `codehighlight-parser/src/commonMain/kotlin/com/hrm/codehigh/lexer/BaseLexer.kt`锛堝姞 whitespaceEnd锛?
-- [ ] **Step 1: 鍏堝啓宕╂簝鍥炲綊娴嬭瘯锛堝綋鍓嶅簲澶辫触锛?*
+- Modify: 14 个词法器文件的转义行（步骤2 清单）与 PLAIN 兜底分支
+- Modify: `codehighlight-parser/src/commonMain/kotlin/com/hrm/codehigh/lexer/BaseLexer.kt`（加 whitespaceEnd）
+- [ ] **Step 1: 先写崩溃回归测试（当前应失败）*
 
 ```kotlin
 package com.hrm.codehigh.lexer
@@ -92,7 +96,7 @@ import kotlin.test.assertTrue
 
 class EscapeBoundsTest {
 
-    /** 鍙嶆枩鏉犵粨灏剧殑鏈棴鍚堝瓧绗︿覆锛氬巻鍙?bug 涓?IndexOutOfBoundsException */
+    /** 反斜杠结尾的未闭合字符串：历史bug 中IndexOutOfBoundsException */
     private val trailingBackslashCases = listOf("\"a\\", "'a\\", "\"\\", "'\\", "\"C:\\")
 
     private val languagesWithQuotes = listOf(
@@ -105,7 +109,7 @@ class EscapeBoundsTest {
         for (lang in languagesWithQuotes) {
             for (case in trailingBackslashCases) {
                 val tokens = LanguageRegistry.getOrPlain(lang).tokenize(case)
-                // 鍏ㄥ瓧绗﹁鐩栦笉鍙樺紡
+                // 全字符覆盖不变式
                 assertEquals(case, tokens.joinToString("") { it.text }, "lang=$lang case=${case.replace("\\", "\\\\")}")
             }
         }
@@ -115,27 +119,28 @@ class EscapeBoundsTest {
     fun should_mergeWhitespace_when_plainFallbackRuns() {
         val tokens = KotlinLexer.tokenize("fun a() {}\n\n\nval x = 1")
         val whitespaceTokens = tokens.filter { it.type == TokenType.PLAIN && it.text.all { c -> c.isWhitespace() } }
-        // 杩炵画绌虹櫧搴斿悎骞朵负鍗曚釜 Token锛堟澶勫惈 \n\n\n 涓夎繛鎹㈣锛?        assertTrue(whitespaceTokens.any { it.text.length > 1 }, "搴斿瓨鍦ㄥ悎骞跺悗鐨勫瀛楃绌虹櫧 Token")
+        // 连续空白应合并为单个 Token（此处含 \n\n\n 三连换行）
+        assertTrue(whitespaceTokens.any { it.text.length > 1 }, "应存在合并后的多字符空白 Token")
     }
 
     @Test
     fun should_mergeCrlf_when_windowsLineEndings() {
         val tokens = KotlinLexer.tokenize("val a = 1\r\nval b = 2")
-        assertTrue(tokens.any { it.type == TokenType.PLAIN && it.text == "\r\n" }, "\\r\\n 搴斿悎骞朵负鍗曚釜 PLAIN Token")
+        assertTrue(tokens.any { it.type == TokenType.PLAIN && it.text == "\r\n" }, "\\r\\n 应合并为单个 PLAIN Token")
     }
 }
 ```
 
-杩愯 `.\gradlew.bat :codehighlight-parser:jvmTest --tests "com.hrm.codehigh.lexer.EscapeBoundsTest" --console=plain`锛岄鏈熺涓€涓敤渚嬫姏 IndexOutOfBoundsException锛團AIL锛夛紝鍚庝袱涓?FAIL銆?
-- [ ] **Step 2: 淇鍏ㄩ儴 22 澶勮浆涔夎秺鐣?*
+运行 `.\gradlew.bat :codehighlight-parser:jvmTest --tests "com.hrm.codehigh.lexer.EscapeBoundsTest" --console=plain`，预期第一个用例抛 IndexOutOfBoundsException（FAIL），后两个FAIL。
+- [ ] **Step 2: 修复全部 22 处转义越界*
 
-缁熶竴鏇挎崲锛歚if (code[pos] == '\\') pos++` 鈫?`if (code[pos] == '\\' && pos + 1 < code.length) pos++`锛圞otlinLexer:90 甯︽敞閲?`// 璺宠繃杞箟瀛楃` 涓€骞朵繚鐣欐敞閲婏級銆?绮剧‘娓呭崟锛堟枃浠?琛岋級锛欱ashLexer:60,73锛汣Lexer:146,159锛圕Lexer:94 宸插畨鍏ㄤ笉鍔級锛汣ssLexer:54锛汫oLexer:72,85锛汮avaLexer:90,103锛汮avaScriptLexer:68,81,94锛汮sonLexer:25锛汯otlinLexer:90,103锛汸ythonLexer:93,106,119锛汻ustLexer:119,132,155锛汼wiftLexer:92锛汿ypeScriptLexer:90,103,116锛沋amlLexer:72銆傦紙ConfigurableLexer:131 宸插畨鍏ㄤ笉鍔級
+统一替换：`if (code[pos] == '\\') pos++` →`if (code[pos] == '\\' && pos + 1 < code.length) pos++`（KotlinLexer:90 带注释`// 跳过转义字符` 一并保留注释）。精确清单（文件行）：BashLexer:60,73；CLexer:146,159（CLexer:94 已安全不动）；CssLexer:54；GoLexer:72,85；JavaLexer:90,103；JavaScriptLexer:68,81,94；JsonLexer:25；KotlinLexer:90,103；PythonLexer:93,106,119；RustLexer:119,132,155；SwiftLexer:92；TypeScriptLexer:90,103,116；YamlLexer:72。（ConfigurableLexer:131 已安全不动）
 
-- [ ] **Step 3: 绌虹櫧鍚堝苟**
+- [ ] **Step 3: 空白合并**
 
-`BaseLexer.kt` 澧炲姞锛?
+`BaseLexer.kt` 增加：
 ```kotlin
-    /** 杩斿洖 [pos] 璧疯繛缁┖鐧藉悗鐨勯涓潪绌虹櫧浣嶇疆 */
+    /** 返回 [pos] 起连续空白后的首个非空白位置 */
     protected fun whitespaceEnd(code: String, pos: Int): Int {
         var i = pos
         while (i < code.length && code[i].isWhitespace()) i++
@@ -143,9 +148,9 @@ class EscapeBoundsTest {
     }
 ```
 
-14 涓墜鍐欒瘝娉曞櫒锛圔ashLexer:157銆丆Lexer:228銆丆ssLexer:168銆丟oLexer:160銆丣avaLexer:170銆丣avaScriptLexer:169銆丣sonLexer:77銆並otlinLexer:177銆丳ythonLexer:194銆丷ustLexer:246銆丼wiftLexer:160銆乊amlLexer:141銆乀ypeScriptLexer:186銆丼qlLexer:177锛夌殑 PLAIN 鍏滃簳锛?
+14 个手写词法器（BashLexer:157、CLexer:228、CssLexer:168、GoLexer:160、JavaLexer:170、JavaScriptLexer:169、JsonLexer:77、KotlinLexer:177、PythonLexer:194、RustLexer:246、SwiftLexer:160、YamlLexer:141、TypeScriptLexer:186、SqlLexer:177）的 PLAIN 兜底。
 ```kotlin
-            // 鍏朵粬瀛楃锛氳繛缁┖鐧藉悎骞朵负鍗曚釜 PLAIN锛屽叾浣欓€愬瓧绗﹀厹搴?            if (c.isWhitespace()) {
+            // 其他字符：连续空白合并为单个 PLAIN，其余逐字符兜底            if (c.isWhitespace()) {
                 val start = pos
                 pos = whitespaceEnd(code, pos)
                 tokens.add(CodeToken(TokenType.PLAIN, start until pos, code))
@@ -155,14 +160,14 @@ class EscapeBoundsTest {
             pos++
 ```
 
-娉ㄦ剰 CLexer.kt 鍐呭惈 `CLexer` 涓?`CppLexer` 涓や釜 object鈥斺€旂敤 grep `PLAIN, c\.toString\(\)` 鎵惧埌璇ユ枃浠跺唴鍏ㄩ儴鍏滃簳锛堟竻鍗曚腑 228 琛屼粎涓€澶勶紝鑻?CppLexer 鍙︽湁鍒欏悓鍨嬫浛鎹級銆侰onfigurableLexer:198 鐨?PLAIN 鍏滃簳鍋氬悓鏍峰鐞嗭紙璇ョ被涓嶇户鎵?BaseLexer锛屽唴鑱?while 寰幆锛夈€?
-- [ ] **Step 4: REGRESS 楠岃瘉锛堝惈鏂版祴璇曪級閫氳繃**
+注意 CLexer.kt 内含 `CLexer` ，`CppLexer` 两个 object——用 grep `PLAIN, c\.toString\(\)` 找到该文件内全部兜底（清单中 228 行仅一处，若CppLexer 另有则同型替换）。ConfigurableLexer:198 的PLAIN 兜底做同样处理（该类不继承BaseLexer，内含while 循环）。
+- [ ] **Step 4: REGRESS 验证（含新测试）通过**
 
-- [ ] **Step 5: Commit** `fix: 淇鍙嶆枩鏉犵粨灏炬湭闂悎瀛楃涓茬殑瓒婄晫宕╂簝锛屽悎骞惰繛缁┖鐧?Token`
+- [ ] **Step 5: Commit** `fix: 修复反斜杠结尾未闭合字符串的越界崩溃，合并连续空白Token`
 
 ---
 
-### Task 3: Lexer 鎺ュ彛鎵╁睍 + KotlinLexer/PythonLexer 涓撻」淇
+### Task 3: Lexer 接口扩展 + KotlinLexer/PythonLexer 专项修复
 
 **Files:**
 - Modify: `codehighlight-parser/src/commonMain/kotlin/com/hrm/codehigh/lexer/Lexer.kt`
@@ -170,18 +175,19 @@ class EscapeBoundsTest {
 - Modify: `codehighlight-parser/src/commonMain/kotlin/com/hrm/codehigh/lexer/PythonLexer.kt`
 - Create: `codehighlight-parser/src/commonTest/kotlin/com/hrm/codehigh/lexer/LexerContractTest.kt`
 
-- [ ] **Step 1: 鎵╁睍 Lexer 鎺ュ彛**
+- [ ] **Step 1: 扩展 Lexer 接口**
 
-鍦?`Lexer.kt` 鎺ュ彛浣撳唴杩藉姞锛坕mport `com.hrm.codehigh.ast.TokenType`锛夛細
+将`Lexer.kt` 接口体内追加（import `com.hrm.codehigh.ast.TokenType`）：
 
 ```kotlin
     /**
-     * 甯﹀叏鏂囧亸绉荤殑璇嶆硶鍒嗘瀽锛屼緵澧為噺寮曟搸浠?token 杈圭晫閲嶅惎瑙ｆ瀽鏃舵彁渚涗笂涓嬫枃
-     * 锛堝琛岄鏁忔劅鍒ゅ畾锛夈€傝繑鍥?Token 鐨?range 浠嶇浉瀵?[code] 浠?0 璁★紝璋冪敤鏂硅嚜琛屽亸绉汇€?     */
+     * 带全文偏移的词法分析，供增量引擎的token 边界重启解析时提供上下文
+     * （如行首敏感判定）。返回Token 的range 仍相对[code] 从0 计，调用方自行偏移。     */
     public fun tokenize(code: String, startOffset: Int): List<CodeToken> = tokenize(code)
 
     /**
-     * 璇?Token 鏄惁鍙兘缁х画鍚告敹鍚庣画瀛楃锛堟湭闂悎鐨勫琛岀粨鏋勶級銆?     * 澧為噺寮曟搸鐢ㄥ畠鍐冲畾鏄惁浠庤 Token 璧风偣閲嶈В鏋愶紱鐭墠缂€锛堝鍗曚釜 `"`锛夌敱寮曟搸鐨?     * 閭昏繎 Token 鍥為€€鍏滃簳锛屾棤闇€鍦ㄦ绌蜂妇銆?     */
+     * 该Token 是否可能继续吸收后续字符（未闭合的多行结构）。
+ * 增量引擎用它决定是否从该 Token 起点重解析；短前缀（如单个 `"`）由引擎处理     * 邻近 Token 回退兜底，无需在此穷举。     */
     public fun isExtendableToken(token: CodeToken): Boolean {
         val t = token.text
         return when (token.type) {
@@ -199,11 +205,11 @@ class EscapeBoundsTest {
     }
 ```
 
-- [ ] **Step 2: KotlinLexer 涓撻」**
+- [ ] **Step 2: KotlinLexer 专项**
 
-a) 澶氳娉ㄩ噴鏀寔宓屽锛堟浛鎹?49-60 琛屽垎鏀級锛?
+a) 多行注释支持嵌套（替换49-60 行分支）。
 ```kotlin
-            // 澶氳娉ㄩ噴锛圞otlin 鏀寔宓屽锛?            if (pos + 1 < code.length && code[pos] == '/' && code[pos + 1] == '*') {
+            // 多行注释（Kotlin 支持嵌套。            if (pos + 1 < code.length && code[pos] == '/' && code[pos + 1] == '*') {
                 val start = pos
                 pos += 2
                 var depth = 1
@@ -221,7 +227,7 @@ a) 澶氳娉ㄩ噴鏀寔宓屽锛堟浛鎹?49-60 琛屽垎鏀級锛?
             }
 ```
 
-b) 杩愮畻绗﹁〃淇 + 棰勮绠楀父閲忥紙object 椤堕儴鏂板锛?54-167 琛屽垎鏀浛鎹級锛?
+b) 运算符表修正 + 预计算常量（object 顶部新增（154-167 行分支替换）。
 ```kotlin
     private val threeCharOps = setOf("..<")
     private val twoCharOps = setOf(
@@ -230,7 +236,7 @@ b) 杩愮畻绗﹁〃淇 + 棰勮绠楀父閲忥紙object 椤堕儴鏂�
     )
 ```
 
-鍒嗘敮浣撴敼涓猴紙涓嶅啀姣忔 setOf/substring锛夛細
+分支体改为（不再每次 setOf/substring）：
 
 ```kotlin
             if (c in "+-*/%=!<>&|^~?:") {
@@ -247,16 +253,16 @@ b) 杩愮畻绗﹁〃淇 + 棰勮绠楀父閲忥紙object 椤堕儴鏂�
             }
 ```
 
-c) 112 琛屾暟瀛楀垎鏀殑姝绘潯浠跺寲绠€锛歚if (c.isDigit() || (c == '0' && ...))` 鈫?`if (c.isDigit())`銆?
-d) 鏍囩偣鍒嗘敮 170 琛?`c in "{}()[];,.$"` 鍘绘帀 `.`锛坄..` 宸茶繘杩愮畻绗﹁〃锛涘崟涓?`.` 淇濈暀鏍囩偣锛氭敼涓哄厹搴曞墠鍗曠嫭澶勭悊鈥斺€斿叿浣擄細鏍囩偣闆嗗悎鏀逛负 `"{}()[];,."`锛宍$` 褰掑叆鍏滃簳 PLAIN锛夈€?
-- [ ] **Step 3: PythonLexer 涓撻」**
+c) 112 行数字分支的死条件化简：`if (c.isDigit() || (c == '0' && ...))` →`if (c.isDigit())`。
+d) 标点分支 170 行`c in "{}()[];,.$"` 去掉 `.`（`..` 已进运算符表；单字符 `.` 保留标点：改为兜底前单独处理——具体：标点集合改为 `"{}()[];,."`，`$` 归入兜底 PLAIN）。
+- [ ] **Step 3: PythonLexer 专项**
 
-a) 瀛楃涓插墠缂€缁勫悎 + 涓夊紩鍙凤紙鏇挎崲 85-99 琛屽垎鏀紝object 椤堕儴鏂板锛夛細
+a) 字符串前缀组合 + 三引号（替换 85-99 行分支，object 顶部新增）：
 
 ```kotlin
     private val stringPrefixes = setOf("r", "b", "u", "f", "rb", "br", "rf", "fr")
 
-    /** 杩斿洖 [pos] 璧峰悎娉曞瓧绗︿覆鍓嶇紑闀垮害锛堝悗闅忓紩鍙锋墠绠楋級锛屽惁鍒?0 */
+    /** 返回 [pos] 起合法字符串前缀长度（后随引号才算），否则0 */
     private fun stringPrefixLengthAt(code: String, pos: Int): Int {
         for (len in 2 downTo 1) {
             if (pos + len >= code.length) continue
@@ -269,10 +275,11 @@ a) 瀛楃涓插墠缂€缁勫悎 + 涓夊紩鍙凤紙鏇挎崲 85-99 琛屽�
     }
 ```
 
-鍒嗘敮浣擄細
+分支体：
 
 ```kotlin
-            // 瀛楃涓插墠缂€锛坒/r/b/u 鍙?rb銆乥r銆乺f銆乫r 缁勫悎锛屾敮鎸佷笁寮曞彿锛?            val prefixLen = stringPrefixLengthAt(code, pos)
+            // 字符串前缀（f/r/b/u 与rb、br、rf、fr 组合，支持三引号。
+            val prefixLen = stringPrefixLengthAt(code, pos)
             if (prefixLen > 0) {
                 val start = pos
                 pos += prefixLen
@@ -299,7 +306,7 @@ a) 瀛楃涓插墠缂€缁勫悎 + 涓夊紩鍙凤紙鏇挎崲 85-99 琛屽�
             }
 ```
 
-b) 杩愮畻绗﹁〃棰勮绠楋紙鍚?KotlinLexer 鏂瑰紡锛?73-184 琛屽垎鏀級锛?
+b) 运算符表预计算（同KotlinLexer 方式（173-184 行分支）。
 ```kotlin
     private val threeCharOps = setOf("**=", "//=", ">>=", "<<=")
     private val twoCharOps = setOf(
@@ -308,8 +315,8 @@ b) 杩愮畻绗﹁〃棰勮绠楋紙鍚?KotlinLexer 鏂瑰紡锛?73-184 琛�
     )
 ```
 
-鍒嗘敮浣撲娇鐢?`"$c$c1$c2" in threeCharOps` / `"$c$c1" in twoCharOps` 瀛楃涓叉ā鏉挎瘮杈冦€?
-- [ ] **Step 4: 鎺ュ彛濂戠害娴嬭瘯**
+分支体使用`"$c$c1$c2" in threeCharOps` / `"$c$c1" in twoCharOps` 字符串模板比较。
+- [ ] **Step 4: 接口契约测试**
 
 ```kotlin
 package com.hrm.codehigh.lexer
@@ -382,17 +389,17 @@ class LexerContractTest {
 }
 ```
 
-- [ ] **Step 5: REGRESS 閫氳繃** 鈥?[x] **Step 6: Commit** `feat: Lexer 鎺ュ彛澧炲姞澧為噺鍗忓晢濂戠害锛涗慨澶?Kotlin 宓屽娉ㄩ噴/杩愮畻绗﹁〃涓?Python 鍓嶇紑瀛楃涓瞏
+- [ ] **Step 5: REGRESS 通过** ；[x] **Step 6: Commit** `feat: Lexer 接口增加增量协商契约；修复Kotlin 嵌套注释/运算符表与Python 前缀字符串`
 
 ---
 
-### Task 4: YamlLexer 琛岄涓婁笅鏂?+ IncrementalHighlighter 閲嶆瀯
+### Task 4: YamlLexer 行首上下文+ IncrementalHighlighter 重构
 
 **Files:**
 - Modify: `codehighlight-parser/src/commonMain/kotlin/com/hrm/codehigh/lexer/YamlLexer.kt`
 - Modify: `codehighlight-parser/src/commonMain/kotlin/com/hrm/codehigh/stream/IncrementalHighlighter.kt`
-- Modify: `codehighlight-parser/src/commonTest/kotlin/com/hrm/codehigh/stream/IncrementalHighlighterTest.kt`锛堣拷鍔犵敤渚嬶紝瑙?T7 瀹屾垚寮哄寲锛?
-- [ ] **Step 1: 鍏堝啓鍋囪棣栧洖褰掓祴璇曪紙杩藉姞鍒?IncrementalHighlighterTest锛?*
+- Modify: `codehighlight-parser/src/commonTest/kotlin/com/hrm/codehigh/stream/IncrementalHighlighterTest.kt`（追加用例，、T7 完成强化。
+- [ ] **Step 1: 先写假行首回归测试（追加至IncrementalHighlighterTest）*
 
 ```kotlin
     @Test
@@ -400,9 +407,9 @@ class LexerContractTest {
         val highlighter = IncrementalHighlighter()
         highlighter.update("a--", "yaml")
         val ast = highlighter.update("a---", "yaml")
-        // 琛岄鏁忔劅鐨?--- 鏂囨。鍒嗛殧绗﹀垽瀹氬繀椤讳娇鐢ㄥ叏鏂囦笂涓嬫枃锛宒irty 瀛愪覆璧峰澶勪笉鏄棣?        assertTrue(
+        // 行首敏感的--- 文档分隔符判定必须使用全文上下文，dirty 子串起始处不是行。        assertTrue(
             ast.tokens.none { it.type == TokenType.KEYWORD && it.text == "---" },
-            "澧為噺閲嶈В鏋愪笉搴旀妸瀛愪覆璧风偣璇垽涓鸿棣栵細tokens=${ast.tokens}"
+            "增量重解析不应把子串起点误判为行首：tokens=${ast.tokens}"
         )
     }
 
@@ -418,11 +425,11 @@ class LexerContractTest {
     @Test
     fun should_reparseFromUnfinishedTokenStart_when_lookbackExceeded() {
         val highlighter = IncrementalHighlighter()
-        // 瓒呰繃 64 瀛楃鍥炵湅绐楀彛鐨勬湭闂悎娉ㄩ噴
+        // 超过 64 字符回看窗口的未闭合注释
         val longComment = "/* " + "x".repeat(200)
         highlighter.update(longComment, "kotlin")
         val result = highlighter.updateDetailed(longComment + "\n*/\nval x = 1", "kotlin")
-        assertEquals(0, result.reparseStart, "鏈棴鍚堟敞閲婂簲浠庡叾璧风偣閲嶈В鏋愯€岄潪鍏ㄩ噺鍥為€€鍒?0")
+        assertEquals(0, result.reparseStart, "未闭合注释应从其起点重解析而非全量回退到0")
         assertTrue(result.ast.tokens.any { it.type == TokenType.COMMENT && it.text.contains("*/") })
     }
 
@@ -437,21 +444,21 @@ class LexerContractTest {
     }
 ```
 
-杩愯澧為噺娴嬭瘯锛屽墠涓や釜鐢ㄤ緥棰勬湡 FAIL銆?
-- [ ] **Step 2: YamlLexer 鏀寔琛岄涓婁笅鏂?*
+运行增量测试，前两个用例预期 FAIL。
+- [ ] **Step 2: YamlLexer 支持行首上下文*
 
-灏?`tokenize(code: String)` 閲嶅懡鍚嶄负甯﹀亸绉诲疄鐜帮細
+将`tokenize(code: String)` 重命名为带偏移实现：
 
 ```kotlin
     override fun tokenize(code: String): List<CodeToken> = tokenize(code, 0)
 
     override fun tokenize(code: String, startOffset: Int): List<CodeToken> {
-        // ...鍘熶富寰幆涓嶅彉锛屼粎鏂囨。鍒嗛殧绗﹀垎鏀殑琛岄鍒ゅ畾鏀逛负锛?        // if ((code.startsWith("---", pos) || code.startsWith("...", pos)) &&
+        // ...原主循环不变，仅文档分隔符分支的行首判定改为：        // if ((code.startsWith("---", pos) || code.startsWith("...", pos)) &&
         //     (startOffset + pos == 0 || code[startOffset + pos - 1] == '\n')) {
 ```
 
-鍚屾椂锛堝悓鏂囦欢锛夛細
-- 杞箟淇宸插湪 T2 瀹屾垚锛?- `~` 姝婚厤缃慨澶嶏細鍦ㄧ粨鏋勭鍙峰垎鏀悗鏂板鍒嗘敮锛?
+同时（同文件）：
+- 转义修复已在 T2 完成；- `~` 死配置修复：在结构符号分支后新增分支。
 ```kotlin
             // null 鍊?~
             if (c == '~') {
@@ -461,9 +468,9 @@ class LexerContractTest {
             }
 ```
 
-- [ ] **Step 3: IncrementalHighlighter 閲嶆瀯**
+- [ ] **Step 3: IncrementalHighlighter 重构**
 
-瀹屾暣鏇挎崲鏂囦欢锛?
+完整替换文件：
 ```kotlin
 package com.hrm.codehigh.stream
 
@@ -472,17 +479,17 @@ import com.hrm.codehigh.ast.CodeToken
 import com.hrm.codehigh.lexer.LanguageRegistry
 
 /**
- * 澧為噺楂樹寒寮曟搸锛岀敤浜庢祦寮忓満鏅笅鐨勯珮鏁堜唬鐮侀珮浜洿鏂般€? *
- * 鏍稿績绛栫暐锛? * 1. 绋冲畾鍓嶇紑 Token 鐩存帴澶嶇敤锛屼笉閲嶆柊瑙ｆ瀽
- * 2. 浠呭灏鹃儴鑴忓尯鍩燂紙浠庢渶鍚庝竴涓彈褰卞搷 Token 鍒版枃鏈湯灏撅級閲嶆柊瑙ｆ瀽锛? *    骞舵妸閲嶈В鏋愯捣鐐逛互 startOffset 浼犵粰璇嶆硶鍣紝淇濊瘉琛岄绛夊叏鏂囦笂涓嬫枃鍒ゅ畾姝ｇ‘
- * 3. 鐩稿悓浠ｇ爜瀛楃涓插拰璇█鍛戒腑 AST 缂撳瓨锛岀洿鎺ヨ繑鍥炵紦瀛樼粨鏋? *
- * [UpdateResult.firstChangedLine] / [UpdateResult.reparseStart] 涓?-1 琛ㄧず鏃犲彉鍖栥€? */
+ * 增量高亮引擎，用于流式场景下的高效代码高亮更新。 *
+ * 核心策略： * 1. 稳定前缀 Token 直接复用，不重新解析
+ * 2. 仅对尾部脏区域（从最后一个受影响 Token 到文本末尾）重新解析。 *    并把重解析起点以 startOffset 传给词法器，保证行首等全文上下文判定正确
+ * 3. 相同代码字符串和语言命中 AST 缓存，直接返回缓存结果 *
+ * [UpdateResult.firstChangedLine] / [UpdateResult.reparseStart] ：-1 表示无变化。 */
 class IncrementalHighlighter {
     data class UpdateResult(
         val ast: CodeAst,
-        /** 棣栦釜鍙樻洿琛屽彿锛?1 琛ㄧず鏈鏃犲彉鍖栵紙缂撳瓨鍛戒腑锛?*/
+        /** 首个变更行号；1 表示本次无变化（缓存命中）*/
         val firstChangedLine: Int,
-        /** 閲嶈В鏋愯捣鐐癸紱-1 琛ㄧず鏈鏃犲彉鍖栵紙缂撳瓨鍛戒腑锛?*/
+        /** 重解析起点；-1 表示本次无变化（缓存命中）*/
         val reparseStart: Int,
     )
 
@@ -504,7 +511,7 @@ class IncrementalHighlighter {
         }
 
         val cached = cachedAst
-        // 闀垮害鐭矾锛岄伩鍏嶅ぇ瀛楃涓查€愬瓧绗︽瘮杈?        if (cached != null && cached.source.length == code.length && cached.source == code) {
+        // 长度短路，避免大字符串逐字符比较        if (cached != null && cached.source.length == code.length && cached.source == code) {
             return UpdateResult(ast = cached, firstChangedLine = -1, reparseStart = -1)
         }
 
@@ -527,10 +534,11 @@ class IncrementalHighlighter {
         val appendedStart = oldAst.source.length
         val reparseStart = determineReparseStart(oldAst, appendedStart)
         val lexer = LanguageRegistry.getOrPlain(language)
-        // 鎸夌ǔ瀹?Token 鏁板彇鍓嶇紑瑙嗗浘锛孫(1) 鏃犳嫹璐?        val stableCount = oldAst.tokens.count { it.range.last < reparseStart }
+        // 按稳定Token 数取前缀视图，O(1) 无拷贝        val stableCount = oldAst.tokens.count { it.range.last < reparseStart }
         val stable = oldAst.tokens.subList(0, stableCount)
 
-        // startOffset 璁╄瘝娉曞櫒浠ュ叏鏂囪瑙掑垽鏂棣栫瓑涓婁笅鏂囷紱杩斿洖 range 浠嶇浉瀵瑰瓙涓?        val dirtyCode = newCode.substring(reparseStart)
+        // startOffset 让词法器以全文视角判断行首等上下文；返回 range 仍相对子串。
+        val dirtyCode = newCode.substring(reparseStart)
         val dirtyTokens = lexer.tokenize(dirtyCode, reparseStart).map { token ->
             CodeToken(
                 type = token.type,
@@ -553,13 +561,13 @@ class IncrementalHighlighter {
     private fun determineReparseStart(oldAst: CodeAst, appendedStart: Int): Int {
         if (appendedStart == 0) return 0
 
-        // 鏈棴鍚堝琛岀粨鏋勶細涓嶅彈鍥炵湅绐楀彛闄愬埗锛堝惁鍒欓暱娉ㄩ噴/闀垮瓧绗︿覆瀵艰嚧姣忔鍏ㄩ噺閲嶈В鏋愶紝娴佸紡绱 O(n虏)锛?        val unfinishedTokenStart = oldAst.tokens
+        // 未闭合多行结构：不受回看窗口限制（否则长注释/长字符串导致每次全量重解析，流式累计 O(n²)。        val unfinishedTokenStart = oldAst.tokens
             .asReversed()
             .firstOrNull { it.range.last < appendedStart && LanguageRegistry.getOrPlain(oldAst.language).isExtendableToken(it) }
             ?.range
             ?.first
 
-        // 閭昏繎 Token 鍥為€€锛氬惛鏀跺洜杩藉姞鑰岃鏀瑰彉灏鹃儴鐨勬渶鍚庝竴涓煭 Token
+        // 邻近 Token 回退：吸收因追加而被改变尾部的最后一个短 Token
         val nearbyTokenStart = oldAst.tokens
             .lastOrNull { it.range.last < appendedStart && appendedStart - it.range.first <= CONTEXT_LOOKBACK_CHARS }
             ?.range
@@ -568,7 +576,7 @@ class IncrementalHighlighter {
         return unfinishedTokenStart ?: nearbyTokenStart ?: 0
     }
 
-    /** 娓呴櫎缂撳瓨锛屽己鍒朵笅娆″叏閲忚В鏋?*/
+    /** 清除缓存，强制下次全量解析*/
     fun invalidate() {
         cachedAst = null
         lastLanguage = ""
@@ -584,34 +592,34 @@ private fun String.countLinesBefore(charIndex: Int): Int {
 }
 ```
 
-娉ㄦ剰锛歞irtyTokens 浠?`newCode` 涓?source锛屾儼鎬?text 鐩存帴浠庢柊鏂囨湰鍒囩墖銆?
-- [ ] **Step 4: REGRESS 閫氳繃锛堥噸鐐?IncrementalHighlighterTest 鍏ㄧ豢锛?*
+注意：dirtyTokens 以`newCode` 为source，惰性text 直接从新文本切片。
+- [ ] **Step 4: REGRESS 通过（重点IncrementalHighlighterTest 全绿）*
 
-- [ ] **Step 5: Commit** `fix: 澧為噺寮曟搸娑堣垂璇嶆硶鍣ㄤ笂涓嬫枃濂戠害锛屼慨澶嶅亣琛岄涓庨暱鏈棴鍚?Token 鐨?O(n虏) 閫€鍖朻
+- [ ] **Step 5: Commit** `fix: 增量引擎消费词法器上下文契约，修复假行首与长未闭合Token 的O(n²) 退化`
 
 ---
 
-### Task 5: ConfigurableLexer 鎺掑簭缂撳瓨 + 鐗规畩瀹氱晫绗﹁鍐?
+### Task 5: ConfigurableLexer 排序缓存 + 特殊定界符覆盖
 **Files:**
 - Modify: `codehighlight-parser/src/commonMain/kotlin/com/hrm/codehigh/lexer/ConfigurableLexer.kt`
 - Modify: `codehighlight-parser/src/commonMain/kotlin/com/hrm/codehigh/lexer/LuaLexer.kt`
 - Modify: `codehighlight-parser/src/commonMain/kotlin/com/hrm/codehigh/lexer/HaskellLexer.kt`
 
-- [ ] **Step 1: 鎺掑簭/鍖归厤琛ㄩ璁＄畻**
+- [ ] **Step 1: 排序/匹配表预计算**
 
-鍏堣 ConfigurableLexer.kt 鍏ㄦ枃銆傚皢 `tokenize` 鍐呮瘡娆℃墽琛岀殑 `sortedByDescending { it.length }`锛堢害 32-38 琛岋紝7 涓被鍒級绉诲埌 object 鍒濆鍖栨椂鐨?`private val`锛坰pec 鑻ヤ负鏋勯€犲弬鏁帮紝鍦?init/灞炴€у垵濮嬪寲鍣ㄤ腑棰勬帓搴忥級銆傛ā寮忥細
+先读 ConfigurableLexer.kt 全文。将 `tokenize` 内每次执行的 `sortedByDescending { it.length }`（约 32-38 行，7 个类别）移到 object 初始化时，`private val`（spec 若为构造参数，在init/属性初始化器中预排序）。模式：
 
 ```kotlin
-    // 棰勮绠楋細鎸夐暱搴﹂檷搴忥紝閬垮厤姣忔 tokenize 閲嶆帓
+    // 预计算：按长度降序，避免每次 tokenize 重排
     private val sortedFixedTokens = spec.fixedTokens.sortedByDescending { it.length }
     private val sortedOperators = spec.operators.sortedByDescending { it.length }
-    // ... 鍏朵綑绫诲埆鍚岀悊
+    // ... 其余类别同理
 ```
 
-涓诲惊鐜腑鐩稿簲 `sortedByDescending` 璋冪敤鏇挎崲涓洪璁＄畻灞炴€с€傚瓧娈靛悕浠ュ疄闄呮枃浠朵负鍑嗛€傞厤銆?
-- [ ] **Step 2: ConfigurableLexer 瑕嗗啓 isExtendableToken**
+主循环中相应 `sortedByDescending` 调用替换为预计算属性。字段名以实际文件为准适配。
+- [ ] **Step 2: ConfigurableLexer 覆写 isExtendableToken**
 
-渚濇嵁 spec 鐨勫琛屽畾鐣岀瀹炵幇锛堣鏂囦欢鍚庢寜瀹為檯瀛楁鍚嶉€傞厤锛夛細
+依据 spec 的多行定界符实现（读文件后按实际字段名适配）：
 
 ```kotlin
     override fun isExtendableToken(token: CodeToken): Boolean {
@@ -625,11 +633,11 @@ private fun String.countLinesBefore(charIndex: Int): Int {
     }
 ```
 
-锛堝瓧娈靛悕浠ュ疄闄?spec 瀹氫箟涓哄噯锛涜嫢 spec 鏃犲潡娉ㄩ噴瀹氱晫瀛楁鍒欏彧淇濈暀鎺掑簭浼樺寲銆傦級
+（字段名以实际spec 定义为准；若 spec 无块注释定界字段则只保留排序优化。）
 
-- [ ] **Step 3: Lua/Haskell 瑕嗗啓**
+- [ ] **Step 3: Lua/Haskell 覆写**
 
-璇讳袱鏂囦欢纭澶氳瀹氱晫绗︼紙Lua 闀垮瓧绗︿覆 `[[`/`]]`锛孒askell 鍧楁敞閲?`{-`/`-}`锛夛紝鍦ㄥ悇鑷?object 鍐呰拷鍔狅細
+读两文件确认多行定界符（Lua 长字符串 `[[`/`]]`，Haskell 块注释`{-`/`-}`），在各object 内追加：
 
 ```kotlin
     // LuaLexer
@@ -653,36 +661,36 @@ private fun String.countLinesBefore(charIndex: Int): Int {
     }
 ```
 
-锛堜互瀹為檯瀹氱晫绗﹀垎鏀懡鍚嶄负鍑嗛€傞厤锛涜嫢璇嶆硶鍣ㄤ笉鏀寔璇ョ粨鏋勫垯璺宠繃骞惰褰曘€傦級
+（以实际定界符分支命名为准适配；若词法器不支持该结构则跳过并记录。）
 
-- [ ] **Step 4: REGRESS 閫氳繃** 鈥?[x] **Step 5: Commit** `perf: ConfigurableLexer 鍖归厤琛ㄩ璁＄畻锛涚壒娈婂畾鐣岀澹版槑鍙墿灞?Token`
+- [ ] **Step 4: REGRESS 通过** ；[x] **Step 5: Commit** `perf: ConfigurableLexer 匹配表预计算；特殊定界符声明可扩展Token`
 
 ---
 
-### Task 6: LanguageRegistry 绾跨▼瀹夊叏
+### Task 6: LanguageRegistry 线程安全
 
 **Files:**
 - Modify: `codehighlight-parser/src/commonMain/kotlin/com/hrm/codehigh/lexer/LanguageRegistry.kt`
 
-- [ ] **Step 1: 楗挎眽鍒濆鍖?*
+- [ ] **Step 1: 饿汉初始化*
 
-鍒犻櫎 `defaultsRegistered`/`ensureDefaultsRegistered`锛宍init { registerDefaults() }`銆傛敞鍐屽畬鎴愬悗娉ㄥ唽琛ㄤ粛鍙€氳繃 `register()` 鎵╁睍锛堜繚鎸佹棦鏈?public 琛屼负锛夛紝浣嗛粯璁よ瑷€鍦ㄧ被鍔犺浇鏃朵竴娆″啓鍏ワ紙object 鍒濆鍖栫敱 JVM/Native 绫诲姞杞芥満鍒朵繚璇佺嚎绋嬪畨鍏紱JS 鍗曠嚎绋嬶級銆俙registry`/`aliases` 淇濇寔 `internal` 鍙彉 map锛堝閮ㄨ嚜瀹氫箟璇█娉ㄥ唽鏄棦鏈夌壒鎬э級銆侹Doc 娉ㄦ槑锛歚register()` 闈炵嚎绋嬪畨鍏紝寤鸿鍦ㄥ簲鐢ㄥ垵濮嬪寲闃舵锛堝崟绾跨▼锛夎皟鐢ㄣ€?
-- [ ] **Step 2: REGRESS 閫氳繃**
+删除 `defaultsRegistered`/`ensureDefaultsRegistered`，`init { registerDefaults() }`。注册完成后注册表仍可通过 `register()` 扩展（保持既有public 行为），但默认语言在类加载时一次写入（object 初始化由 JVM/Native 类加载机制保证线程安全；JS 单线程）。`registry`/`aliases` 保持 `internal` 可变 map（外部自定义语言注册是既有特性）。KDoc 注明：`register()` 非线程安全，建议在应用初始化阶段（单线程）调用。
+- [ ] **Step 2: REGRESS 通过**
 
-- [ ] **Step 3: Commit** `fix: LanguageRegistry 榛樿璇█楗挎眽娉ㄥ唽锛屾秷闄ゆ噿鍒濆鍖栫珵鎬乣
+- [ ] **Step 3: Commit** `fix: LanguageRegistry 默认语言饿汉注册，消除懒初始化竞态`
 
 ---
 
-### Task 7: parser 娴嬭瘯鍗囩骇
+### Task 7: parser 测试升级
 
 **Files:**
 - Modify: `codehighlight-parser/src/commonTest/kotlin/com/hrm/codehigh/stream/IncrementalHighlighterTest.kt`
 - Create: `codehighlight-parser/src/commonTest/kotlin/com/hrm/codehigh/lexer/LanguageCoverageTest.kt`
 
-- [ ] **Step 1: 淇浼鐩栨柇瑷€**
+- [ ] **Step 1: 修复伪覆盖断言**
 
-`should_returnCachedAst_when_sameCodeAndLanguage`锛歚assertEquals(ast1, ast2)` 鈫?`assertSame(ast1, ast2)`锛坕mport kotlin.test.assertSame锛夈€?`should_invalidateCache_when_invalidateCalled`锛氳拷鍔?`assertNotSame(ast1, ast2)`锛坕mport kotlin.test.assertNotSame锛夈€?
-- [ ] **Step 2: 鍏ㄨ瑷€瑕嗙洊娴嬭瘯锛?8 璇█锛屽惈閲嶆瀯涓嶅彉寮忥級**
+`should_returnCachedAst_when_sameCodeAndLanguage`：`assertEquals(ast1, ast2)` →`assertSame(ast1, ast2)`（import kotlin.test.assertSame）、`should_invalidateCache_when_invalidateCalled`：追加`assertNotSame(ast1, ast2)`（import kotlin.test.assertNotSame）。
+- [ ] **Step 2: 全语言覆盖测试（28 语言，含重构不变式）**
 
 ```kotlin
 package com.hrm.codehigh.lexer
@@ -695,7 +703,7 @@ import kotlin.test.assertTrue
 
 class LanguageCoverageTest {
 
-    /** 姣忚瑷€鏈€灏忔牱鏈細鍚敞閲娿€佸瓧绗︿覆銆佸叧閿瓧/鎸囦护褰㈡€?*/
+    /** 每语言最小样本：含注释、字符串、关键字/指令形态*/
     private val samples: Map<String, String> = mapOf(
         "kotlin" to "fun main() { /* c */ val s = \"hi\" }",
         "java" to "class A { // c\nString s = \"hi\"; }",
@@ -734,24 +742,24 @@ class LanguageCoverageTest {
             assertEquals(
                 sample,
                 tokens.joinToString("") { it.text },
-                "lang=$lang 閲嶆瀯涓嶅彉寮忕牬鍧?,
+                "lang=$lang 重构不变式破坏,
             )
         }
     }
 
     @Test
     fun should_haveCommentAndStringTokens_when_allLanguagesTokenized() {
-        // XML/Dockerfile/Bash/YAML/TOML/R/Diff 鍚勮嚜鑷冲皯瀛樺湪娉ㄩ噴鎴栧厓淇℃伅 Token锛?        // JSON 鏃犳敞閲婏紝浠呮柇瑷€瀛楃涓?        for ((lang, sample) in samples) {
+        // XML/Dockerfile/Bash/YAML/TOML/R/Diff 各自至少存在注释或元信息 Token；        // JSON 无注释，仅断言字符串        for ((lang, sample) in samples) {
             val tokens = LanguageRegistry.getOrPlain(lang).tokenize(sample)
             if (lang != "json") {
                 assertTrue(
                     tokens.any { it.type == TokenType.COMMENT },
-                    "lang=$lang 搴旇瘑鍒敞閲?,
+                    "lang=$lang 应识别注释,
                 )
             }
             assertTrue(
                 tokens.any { it.type == TokenType.STRING || it.type == TokenType.COMMENT },
-                "lang=$lang 搴旇瘑鍒瓧绗︿覆鎴栨敞閲?,
+                "lang=$lang 应识别字符串或注释,
             )
         }
     }
@@ -768,50 +776,52 @@ class LanguageCoverageTest {
 
     @Test
     fun should_notThrow_when_unclosedConstructsAcrossLanguages() {
-        // 娴佸紡涓棿鎬侊細鍚勭被鏈棴鍚堢粨鏋?        val unclosed = listOf("/* ", "\"", "'", "\"\"\"", "#", "<a href=", "{ \"k\": ")
+        // 流式中间态：各类未闭合结构        val unclosed = listOf("/* ", "\"", "'", "\"\"\"", "#", "<a href=", "{ \"k\": ")
         for (lang in samples.keys) {
             for (snippet in unclosed) {
-                LanguageRegistry.getOrPlain(lang).tokenize(snippet) // 涓嶆姏寮傚父鍗抽€氳繃
+                LanguageRegistry.getOrPlain(lang).tokenize(snippet) // 不抛异常即通过
             }
         }
     }
 }
 ```
 
-锛堣嫢鏌愯瑷€鏍锋湰鏂█澶辫触锛岃鏄庤璇嶆硶鍣ㄥ瓨鍦ㄧ湡瀹炵己鍙ｏ細鍏堜慨璇嶆硶鍣ㄥ啀鍥炴潵璺戠豢鈥斺€斿鐓уけ璐ヤ俊鎭畾浣嶏紝绂佹鏀惧鏂█鏉?閫氳繃"銆傦級
+（若某语言样本断言失败，说明该词法器存在真实缺口：先修词法器再回来跑绿——对照失败信息定位，禁止放宽断言骗通过"。）
 
-- [ ] **Step 3: REGRESS 閫氳繃** 鈥?[x] **Step 4: Commit** `test: 鏂█缂撳瓨鍚屼竴鎬т笌 28 璇█鍏ㄨ鐩栦笉鍙樺紡`
+- [ ] **Step 3: REGRESS 通过** ；[x] **Step 4: Commit** `test: 断言缓存同一性与 28 语言全覆盖不变式`
 
 ---
 
-### Task 8: 涓婚灞傜ǔ瀹氭€?+ diff 瀹氬埗 + CompositionLocal 淇
+### Task 8: 主题层稳定性+ diff 定制 + CompositionLocal 修正
 
 **Files:**
-- Create: `codehighlight-render/src/commonMain/kotlin/com/hrm/codehigh/theme/CodeLineKind.kt`锛堜粠 renderer 鍖?public 鍖栬縼绉伙級
+- Create: `codehighlight-render/src/commonMain/kotlin/com/hrm/codehigh/theme/CodeLineKind.kt`（从 renderer 至public 化迁移）
 - Modify: `codehighlight-render/src/commonMain/kotlin/com/hrm/codehigh/theme/CodeTheme.kt`
 - Modify: `codehighlight-render/src/commonMain/kotlin/com/hrm/codehigh/theme/LocalCodeTheme.kt`
-- Modify: `codehighlight-render/src/commonMain/kotlin/com/hrm/codehigh/renderer/HighlightedString.kt`锛圕odeLineKind 寮曠敤鏀瑰寘锛?- Modify: `codehighlight-render/src/commonMain/kotlin/com/hrm/codehigh/renderer/CodeBlock.kt`锛坕mport 璋冩暣锛屾湰浠诲姟浠呮渶灏忔敼鍔紝閲嶆瀯鍦?T10锛?- Modify: `codehighlight-render/src/commonTest/kotlin/com/hrm/codehigh/theme/CodeThemeTest.kt`
+- Modify: `codehighlight-render/src/commonMain/kotlin/com/hrm/codehigh/renderer/HighlightedString.kt`（CodeLineKind 引用改包。
+- Modify: `codehighlight-render/src/commonMain/kotlin/com/hrm/codehigh/renderer/CodeBlock.kt`（import 调整，本任务仅最小改动，重构留待T10；
+- Modify: `codehighlight-render/src/commonTest/kotlin/com/hrm/codehigh/theme/CodeThemeTest.kt`
 
-- [ ] **Step 1: CodeLineKind 杩佺Щ鑷?theme 鍖呭苟 public**
+- [ ] **Step 1: CodeLineKind 迁移至theme 包并 public**
 
-鏂版枃浠讹細
+新文件：
 
 ```kotlin
 package com.hrm.codehigh.theme
 
-/** 浠ｇ爜琛屾覆鏌撶绫伙細鏅€?楂樹寒/diff 鍚勫舰鎬?*/
+/** 代码行渲染种类：普通高亮/diff 各形态*/
 enum class CodeLineKind {
     NORMAL, HIGHLIGHTED, DIFF_ADDED, DIFF_REMOVED, DIFF_META_HEADER, DIFF_META_HUNK
 }
 ```
 
-鍒犻櫎 HighlightedString.kt 鍐呯殑 internal enum CodeLineKind锛宺enderer 鍐呭紩鐢ㄦ敼 import锛圕odeLineRender 淇濇寔 internal锛屽叾 kind 瀛楁绫诲瀷鏀逛负 theme.CodeLineKind锛夈€?
-- [ ] **Step 2: CodeTheme 澧炲己**
+删除 HighlightedString.kt 内的 internal enum CodeLineKind，renderer 内引用改 import（CodeLineRender 保持 internal，其 kind 字段类型改为 theme.CodeLineKind）。
+- [ ] **Step 2: CodeTheme 增强**
 
-`CodeTheme.kt` 鎺ュ彛鏍囨敞 `@Immutable`锛坕mport androidx.compose.runtime.Immutable锛夛紝骞惰拷鍔?diff 鍓嶆櫙/鏍囪榛樿灞炴€э紙鍘?CodeBlock.kt:269-294 纭紪鐮佽縼鍏ワ紝鑷畾涔変富棰樺彲瑕嗗啓锛夛細
+`CodeTheme.kt` 接口标注 `@Immutable`（import androidx.compose.runtime.Immutable），并追加diff 前景/标记默认属性（将CodeBlock.kt:269-294 硬编码迁入，自定义主题可覆写）：
 
 ```kotlin
-    /** diff 鏍囪锛?/-锛夊墠鏅壊 */
+    /** diff 标记（/-）前景色 */
     fun diffMarkerColor(kind: CodeLineKind): Color = when (kind) {
         CodeLineKind.DIFF_ADDED -> if (isDark) Color(0xFF9BE9A8) else Color(0xFF1F7A38)
         CodeLineKind.DIFF_REMOVED -> if (isDark) Color(0xFFFFA8B5) else Color(0xFFB42318)
@@ -820,7 +830,7 @@ enum class CodeLineKind {
         else -> colorFor(TokenType.PLAIN)
     }
 
-    /** diff 鏍囪鑳屾櫙鑹?*/
+    /** diff 标记背景色*/
     fun diffMarkerBackground(kind: CodeLineKind): Color = when (kind) {
         CodeLineKind.DIFF_ADDED -> if (isDark) Color(0xFF224D35) else Color(0xFFD9F5E0)
         CodeLineKind.DIFF_REMOVED -> if (isDark) Color(0xFF5A2730) else Color(0xFFFADADD)
@@ -829,7 +839,7 @@ enum class CodeLineKind {
         else -> Color.Transparent
     }
 
-    /** diff 鍏冧俊鎭姝ｆ枃棰滆壊 */
+    /** diff 元信息行正文颜色 */
     fun diffTextColor(kind: CodeLineKind): Color = when (kind) {
         CodeLineKind.DIFF_META_HEADER -> if (isDark) Color(0xFFE5E7EB) else Color(0xFF374151)
         CodeLineKind.DIFF_META_HUNK -> if (isDark) Color(0xFFBFE3FF) else Color(0xFF0B4F8A)
@@ -837,18 +847,18 @@ enum class CodeLineKind {
     }
 ```
 
-`backgroundForLine`锛圚ighlightedString.kt:167-174 鐨?internal 鎵╁睍锛変繚鎸佷笉鍔ㄣ€?
+`backgroundForLine`（HighlightedString.kt:167-174 的internal 扩展）保持不动。
 - [ ] **Step 3: LocalCodeTheme 鏀?compositionLocalOf**
 
 ```kotlin
 val LocalCodeTheme = compositionLocalOf<CodeTheme> { OneDarkProTheme }
 ```
 
-锛堜富棰樹細闅忕郴缁熸殫鑹叉ā寮忓姩鎬佸垏鎹紝static 鐗堜笉杩借釜渚濊禆銆傦級
+（主题会随系统暗色模式动态切换，static 版不追踪依赖。）
 
-- [ ] **Step 4: CodeThemeTest 鍗囩骇**
+- [ ] **Step 4: CodeThemeTest 升级**
 
-鍚堝苟 4 涓悓鏋勭敤渚?+ Unspecified 寮烘柇瑷€ + safeColorFor 鐪熷洖閫€锛?
+合并 4 个同构用例+ Unspecified 强断言 + safeColorFor 真回退。
 ```kotlin
     private val allThemes = listOf(OneDarkProTheme, GithubLightTheme, DraculaProTheme, SolarizedLightTheme)
 
@@ -880,27 +890,27 @@ val LocalCodeTheme = compositionLocalOf<CodeTheme> { OneDarkProTheme }
     }
 ```
 
-鍒犻櫎鍘?4 涓?`should_coverAllTokenTypes_when_*Theme` 涓庢棫 `should_fallbackToPlain_when_safeColorFor`锛沬sDark 鏂█鐢?allThemes 寰幆锛坉ark 涓婚 2 涓€乴ight 2 涓級銆俰mport `com.hrm.codehigh.theme.CodeLineKind`锛堝悓鍖呮棤闇€锛夈€?
-- [ ] **Step 5: REGRESS 閫氳繃** 鈥?[x] **Step 6: Commit** `feat: 涓婚鎺ュ彛 @Immutable 涓?diff 棰滆壊瀹氬埗锛涗慨澶?CompositionLocal 璇箟`
+删除原4 个`should_coverAllTokenTypes_when_*Theme` 与旧 `should_fallbackToPlain_when_safeColorFor`；isDark 断言并入allThemes 循环（dark 主题 2 个、light 2 个）。import `com.hrm.codehigh.theme.CodeLineKind`（同包无需）。
+- [ ] **Step 5: REGRESS 通过** ；[x] **Step 6: Commit** `feat: 主题接口 @Immutable 与diff 颜色定制；修复CompositionLocal 语义`
 
 ---
 
-### Task 9: HighlightedString 娓叉煋浼樺寲 + 娴嬭瘯
+### Task 9: HighlightedString 渲染优化 + 测试
 
 **Files:**
 - Modify: `codehighlight-render/src/commonMain/kotlin/com/hrm/codehigh/renderer/HighlightedString.kt`
 - Create: `codehighlight-render/src/commonTest/kotlin/com/hrm/codehigh/renderer/HighlightedStringTest.kt`
 
-- [ ] **Step 1: buildHighlightedString 鏍峰紡缂撳瓨 + 鐩搁偦鍚堝苟**
+- [ ] **Step 1: buildHighlightedString 样式缓存 + 相邻合并**
 
-鏇挎崲 117-143 琛屽疄鐜帮細
+替换 117-143 行实现：
 
 ```kotlin
 fun buildHighlightedString(
     tokens: List<CodeToken>,
     theme: CodeTheme
 ): AnnotatedString {
-    // 鎸夌被鍨嬬紦瀛?SpanStyle锛堜富棰樺崟渚嬨€乀oken 绫诲瀷鏈夐檺锛夛紝鐩搁偦鍚屾牱寮忓悎骞?span
+    // 按类型缓存SpanStyle（主题单例、Token 类型有限），相邻同样式合并span
     val styleCache = HashMap<TokenType, SpanStyle>(TokenType.entries.size)
     fun styleFor(type: TokenType): SpanStyle = styleCache.getOrPut(type) {
         SpanStyle(
@@ -927,8 +937,8 @@ fun buildHighlightedString(
 }
 ```
 
-`buildLineRenders` 鍐咃紙鍘?FromOffset 閫昏緫鍐呰仈鍚庯級锛歚language.lowercase()` 鎻愬崌鍒板嚱鏁板紑澶磋绠椾竴娆′紶鍏?`resolveLineKind`锛堝叾绛惧悕鍐呴儴鏀逛负鎺ユ敹宸插綊涓€鍖?language锛夈€?
-- [ ] **Step 2: 娴嬭瘯**
+`buildLineRenders` 内（原FromOffset 逻辑内联后）：`language.lowercase()` 提升到函数开头计算一次传给`resolveLineKind`（其签名内部改为接收已归一化language）。
+- [ ] **Step 2: 测试**
 
 ```kotlin
 package com.hrm.codehigh.renderer
@@ -948,11 +958,11 @@ class HighlightedStringTest {
         val src = "aaa bbb"
         val tokens = listOf(
             CodeToken(TokenType.PLAIN, 0 until 3, src),
-            CodeToken(TokenType.PLAIN, 3 until 7, src), // 鍚┖鏍硷紝鍚屼负 PLAIN
+            CodeToken(TokenType.PLAIN, 3 until 7, src), // 含空格，同为 PLAIN
         )
         val s = buildHighlightedString(tokens, OneDarkProTheme)
         assertEquals(src, s.text)
-        assertEquals(1, s.spanStyles.size, "鐩搁偦鍚屾牱寮忓簲鍚堝苟涓?1 涓?span")
+        assertEquals(1, s.spanStyles.size, "相邻同样式应合并为1 个span")
     }
 
     @Test
@@ -976,32 +986,32 @@ class HighlightedStringTest {
         )
         val s = buildHighlightedString(tokens, OneDarkProTheme)
         assertEquals(3, s.spanStyles.size)
-        assertTrue(s.spanStyles.map { it.item }.distinct().size <= 2, "PLAIN 涓?IDENTIFIER 鍚岃壊涔熷簲澶嶇敤鐩哥瓑 SpanStyle")
+        assertTrue(s.spanStyles.map { it.item }.distinct().size <= 2, "PLAIN 与IDENTIFIER 同色也应复用相等 SpanStyle")
         // SpanStyle 鐩哥瓑鎬?        assertEquals(SpanStyle(color = OneDarkProTheme.colorFor(TokenType.PLAIN)), s.spanStyles[0].item)
     }
 }
 ```
 
-娉細OneDarkPro 鐨?IDENTIFIER 涓?PLAIN 鍚岃壊锛?xFFABB2BF锛夛紝鐩搁偦鍚屾牱寮忥紙鍚腑闂翠笉鍚?push 閫昏緫锛変緷瀹炵幇搴斾负 3 娈?span锛涜嫢鏂█涓庡疄鐜扮粏鑺傚啿绐佷互"span 鏁?鈮?token 鏁颁笖鐩搁偦鍚岀被鍨嬪悎骞?涓哄噯淇鏂█骞惰鏄庛€?
-- [ ] **Step 3: REGRESS 閫氳繃** 鈥?[x] **Step 4: Commit** `perf: 楂樹寒瀛楃涓?SpanStyle 缂撳瓨涓庣浉閭诲悎骞讹紝span 鏁伴噺鍘婚噸`
+注：OneDarkPro 的IDENTIFIER 与PLAIN 同色（xFFABB2BF），相邻同样式（含中间不可push 逻辑）依实现应为 3 个span；若断言与实现细节冲突以"span 数、token 数且相邻同类型合并为准修正断言并说明。
+- [ ] **Step 3: REGRESS 通过** ；[x] **Step 4: Commit** `perf: 高亮字符数SpanStyle 缓存与相邻合并，span 数量去重`
 
 ---
 
-### Task 10: CodeBlock 娓叉煋閲嶆瀯
+### Task 10: CodeBlock 渲染重构
 
 **Files:**
 - Modify: `codehighlight-render/src/commonMain/kotlin/com/hrm/codehigh/renderer/CodeBlock.kt`
 
-- [ ] **Step 1: 鍏ュ彛褰掍竴鍖栦笌璁板繂鍖栵紙鏇挎崲 71-94 琛屽尯鍩燂級**
+- [ ] **Step 1: 入口归一化与记忆化（替换 71-94 行区域）**
 
 ```kotlin
-    // CRLF 褰掍竴鍖栵紙Windows 鍓创鏉垮父瑙侊級锛屽苟璁板繂鍖栬鎷嗗垎锛屾祦寮忛珮棰戦噸缁勪笅閬垮厤 O(n) 閲嶅垎閰?    val normalizedCode = remember(code) { if (code.contains('\r')) code.replace("\r\n", "\n").replace("\r", "\n") else code }
+    // CRLF 归一化（Windows 剪贴板常见），并记忆化行拆分，流式高频重组下避免 O(n) 重分析    val normalizedCode = remember(code) { if (code.contains('\r')) code.replace("\r\n", "\n").replace("\r", "\n") else code }
     val lines = remember(normalizedCode) { normalizedCode.split("\n") }
     val totalLines = lines.size
     val isCollapsible = maxVisibleLines != null && totalLines > maxVisibleLines
     val visibleLineCount = when {
         !isCollapsible || isExpanded -> totalLines
-        else -> maxVisibleLines!! // isCollapsible 涓?true 鏃跺繀闈炵┖
+        else -> maxVisibleLines!! // isCollapsible 为true 时必非空
     }
     val visibleLines = remember(visibleLineCount, lines) { lines.take(visibleLineCount) }
     val visibleCode = remember(visibleLines) { visibleLines.joinToString("\n") }
@@ -1013,17 +1023,17 @@ class HighlightedStringTest {
     }
 ```
 
-- [ ] **Step 2: 寮傛瑙ｆ瀽 + 澧為噺淇℃伅娑堣垂锛堟浛鎹?visibleAst/lineHighlights 涓ゆ remember锛?*
+- [ ] **Step 2: 异步解析 + 增量信息消费（替换visibleAst/lineHighlights 两段 remember）*
 
 ```kotlin
     val highlighter = remember { IncrementalHighlighter() }
-    // 鍒濆 null锛氶甯у厛璧扮函鏂囨湰鍥為€€锛岃В鏋愬湪 Default 璋冨害鍣ㄦ墽琛屽悗鏇挎崲
+    // 初始 null：首帧先走纯文本回退，解析在 Default 调度器执行后替换
     var lineHighlights by remember { mutableStateOf<List<CodeLineRender>?>(null) }
     var visibleAst by remember { mutableStateOf<CodeAst?>(null) }
     LaunchedEffect(visibleCode, language, theme) {
         val result = withContext(Dispatchers.Default) {
             val detailed = highlighter.updateDetailed(visibleCode, language)
-            if (detailed.firstChangedLine < 0) null else { // 鏃犲彉鍖栨椂淇濈暀鐜版湁娓叉煋
+            if (detailed.firstChangedLine < 0) null else { // 无变化时保留现有渲染
                 detailed.ast to buildLineRenders(
                     sourceLines = visibleLines,
                     tokens = detailed.ast.tokens,
@@ -1041,18 +1051,21 @@ class HighlightedStringTest {
     val resolvedLines = lineHighlights ?: visibleLines.map { CodeLineRender(CodeLineKind.NORMAL, AnnotatedString(it)) }
 ```
 
-锛坄highlighter` 涓嶅啀浠?language 涓?key鈥斺€攗pdateDetailed 鍐呴儴宸插鐞嗚瑷€鍒囨崲銆傛柊澧?import锛歚com.hrm.codehigh.ast.CodeAst`銆乣kotlinx.coroutines.Dispatchers`銆乣kotlinx.coroutines.withContext`銆俙fallbackToPlainLines` 鍒ゅ畾鏀瑰熀浜?resolvedLines銆傦級
+（`highlighter` 不再以language 作key——updateDetailed 内部已处理语言切换。新增import：`com.hrm.codehigh.ast.CodeAst`、`kotlinx.coroutines.Dispatchers`、`kotlinx.coroutines.withContext`。`fallbackToPlainLines` 判定改基于resolvedLines。）
 
-- [ ] **Step 3: 甯冨眬淇**
+- [ ] **Step 3: 布局修复**
 
-- 琛屽鍣細`Modifier.height(codeLineHeightDp)` 鈫?`Modifier.heightIn(min = codeLineHeightDp)`锛坕mport androidx.compose.foundation.layout.heightIn锛夈€?- 琛屽彿瀹藉害鍔ㄦ€侊細`val lineNumberWidth = remember(totalLines) { ((totalLines.toString().length.coerceAtLeast(2)) * 8 + 8).dp }`锛?91 琛?`.width(40.dp)` 鈫?`.width(lineNumberWidth)`銆?- 姝ｆ枃鏍峰紡缂撳瓨锛歚val textStylesByKind = remember(theme) { CodeLineKind.entries.associateWith { theme.textStyleForLine(it) } }`锛涚鏈夋墿灞?`textStyleForLine` 鏀圭敤 `theme.diffTextColor(kind)`锛沗diffMarkerBackgroundForLine`/`diffMarkerColorForLine` 绉佹湁鎵╁睍鍒犻櫎锛岃皟鐢ㄧ偣鏀?`theme.diffMarkerBackground(kind)`/`theme.diffMarkerColor(kind)`銆?25-228 琛?BasicText锛歚style = textStylesByKind.getValue(lineRender.kind)`銆?- KDoc 涓庨粯璁ゅ€硷細`maxVisibleLines: Int? = 500`锛孠Doc 鏇存柊锛?榛樿 500锛宯ull 涓嶉檺鍒?锛夈€?
-- [ ] **Step 4: onTokenClick 瀹炵幇**
+- 行容器：`Modifier.height(codeLineHeightDp)` →`Modifier.heightIn(min = codeLineHeightDp)`（import androidx.compose.foundation.layout.heightIn）。
+- 行号宽度动态：`val lineNumberWidth = remember(totalLines) { ((totalLines.toString().length.coerceAtLeast(2)) * 8 + 8).dp }`（91 行）`.width(40.dp)` →`.width(lineNumberWidth)`。
+- 正文样式缓存：`val textStylesByKind = remember(theme) { CodeLineKind.entries.associateWith { theme.textStyleForLine(it) } }`；私有扩展`textStyleForLine` 改用 `theme.diffTextColor(kind)`；`diffMarkerBackgroundForLine`/`diffMarkerColorForLine` 私有扩展删除，调用点改`theme.diffMarkerBackground(kind)`/`theme.diffMarkerColor(kind)`、25-228 行BasicText：`style = textStylesByKind.getValue(lineRender.kind)`。
+- KDoc 与默认值：`maxVisibleLines: Int? = 500`，KDoc 更新（默认 500，null 不限制）。
+- [ ] **Step 4: onTokenClick 实现**
 
 ```kotlin
     val tokenClickLayouts = remember { mutableMapOf<Int, TextLayoutResult>() }
 ```
 
-姝ｆ枃 BasicText锛圫tep 3 淇敼鍚庯級杩藉姞鍙傛暟锛?
+正文 BasicText（Step 3 修改后）追加参数。
 ```kotlin
                                 BasicText(
                                     text = displayText,
@@ -1072,10 +1085,10 @@ class HighlightedStringTest {
                                 )
 ```
 
-import锛歚androidx.compose.foundation.gestures.detectTapGestures`銆乣androidx.compose.ui.input.pointer.pointerInput`銆乣androidx.compose.ui.text.TextLayoutResult`銆?
-- [ ] **Step 5: 鏂囨湰鍙€?+ CopyButton**
+import：`androidx.compose.foundation.gestures.detectTapGestures`、`androidx.compose.ui.input.pointer.pointerInput`、`androidx.compose.ui.text.TextLayoutResult`。
+- [ ] **Step 5: 文本可选+ CopyButton**
 
-- 鏂板弬鏁?`selectable: Boolean = true`锛圞Doc锛氭鏂囨槸鍚﹀彲閫変腑澶嶅埗锛夈€傝 Column 鐢?`if (selectable) SelectionContainer { Column { ... } } else Column { ... }` 鍖呰９锛坕mport androidx.compose.foundation.text.selection.SelectionContainer锛夈€傚皢鍘?158-240 琛?Column 鍐呭鎻愬彇涓烘湰鍦?`val linesContent = @Composable { ... }` 閬垮厤閲嶅锛屼袱绉嶅垎鏀潎璋冪敤 `linesContent()`銆?- CopyButton 璁℃椂淇锛堣繛鍑婚噸缃級锛?
+- 新参数`selectable: Boolean = true`（KDoc：正文是否可选中复制）。行 Column 用`if (selectable) SelectionContainer { Column { ... } } else Column { ... }` 包裹（import androidx.compose.foundation.text.selection.SelectionContainer）。将其158-240 行Column 内容提取为本文件`val linesContent = @Composable { ... }` 避免重复，两种分支均调用 `linesContent()`。- CopyButton 计时修复（连击重置）。
 ```kotlin
     var copyCount by remember { mutableStateOf(0) }
     val copied = copyCount > 0
@@ -1085,36 +1098,37 @@ import锛歚androidx.compose.foundation.gestures.detectTapGestures`銆乣android
             copyCount = 0
         }
     }
-    // clickable 鍐咃細澶嶅埗鍚?copyCount++
+    // clickable 内：复制后copyCount++
 ```
 
-- 鍓创鏉?API 杩佺Щ锛歚LocalClipboardManager`/`clipboardManager.setText` 杩佺Щ鍒?`val clipboard = LocalClipboard.current` + `clipboard.setClipEntry(ClipEntry(AnnotatedString(code)))`锛坈ompose.ui 1.9 澶氬钩鍙?API锛夛紱鑻ヨ鏋勯€?鏂规硶鍦ㄥ綋鍓嶇増鏈鍚嶄笉鍚岋紙缂栬瘧鍣ㄤ細鎸囧嚭锛夛紝鎸夋彁绀烘敼涓虹瓑浠峰舰寮忥紙濡?`ClipEntry.of(...)`锛夛紝淇濇寔鍒犻櫎涓ゅ `@Suppress("DEPRECATION")`銆俰mport `androidx.compose.ui.platform.LocalClipboard`銆乣androidx.compose.ui.platform.ClipEntry`銆?
-- [ ] **Step 6: REGRESS 閫氳繃锛坮ender jvmTest + preview 鐩稿叧缂栬瘧锛?*
+- 剪贴板API 迁移：`LocalClipboardManager`/`clipboardManager.setText` 迁移至`val clipboard = LocalClipboard.current` + `clipboard.setClipEntry(ClipEntry(AnnotatedString(code)))`（compose.ui 1.9 多平台API）；若该构造方法在当前版本签名不同（编译器会指出），按提示改为等价形式（见`ClipEntry.of(...)`），保持删除两处 `@Suppress("DEPRECATION")`。import `androidx.compose.ui.platform.LocalClipboard`、`androidx.compose.ui.platform.ClipEntry`。
+- [ ] **Step 6: REGRESS 通过（render jvmTest + preview 相关编译）*
 
 `.\gradlew.bat :codehighlight-render:jvmTest :codehighlight-preview:compileKotlinJvm --console=plain`
 
-- [ ] **Step 7: Commit** `feat: CodeBlock 寮傛澧為噺娓叉煋銆乷nTokenClick 鐐瑰嚮鍒嗗彂銆佸竷灞€鏃犻殰纰嶄笌閫夋嫨鏀寔`
+- [ ] **Step 7: Commit** `feat: CodeBlock 异步增量渲染、onTokenClick 点击分发、布局无障碍与选择支持`
 
 ---
 
-### Task 11: i18n 娉ㄥ叆 + StreamingCursor + InlineCodeSize 鍗曚綅
+### Task 11: i18n 注入 + StreamingCursor + InlineCodeSize 单位
 
 **Files:**
 - Modify: `codehighlight-render/src/commonMain/kotlin/com/hrm/codehigh/i18n/Strings.kt`
-- Modify/鍒犻櫎: `codehighlight-render/src/*Main/kotlin/com/hrm/codehigh/i18n/PlatformLocale.kt`锛? 涓?actual锛?- Create: `codehighlight-render/src/commonMain/kotlin/com/hrm/codehigh/i18n/LocalCodeBlockStrings.kt`
-- Modify: `codehighlight-render/src/commonMain/kotlin/com/hrm/codehigh/renderer/CodeBlock.kt`锛堟秷璐规敞鍏ワ級
+- Modify/删除: `codehighlight-render/src/*Main/kotlin/com/hrm/codehigh/i18n/PlatformLocale.kt`（ 3 个actual）- Create: `codehighlight-render/src/commonMain/kotlin/com/hrm/codehigh/i18n/LocalCodeBlockStrings.kt`
+- Modify: `codehighlight-render/src/commonMain/kotlin/com/hrm/codehigh/renderer/CodeBlock.kt`（消费注入）
 - Modify: `codehighlight-render/src/commonMain/kotlin/com/hrm/codehigh/renderer/StreamingCursor.kt`
 - Modify: `codehighlight-render/src/commonMain/kotlin/com/hrm/codehigh/renderer/InlineCodeMeasurer.kt`
-- Modify: preview 妯″潡寮曠敤鐐癸紙grep `measureInlineCodeSize|InlineCodeSize|widthDp|heightDp` 瀹氫綅锛?- Modify: `codehighlight-render/src/commonTest/kotlin/com/hrm/codehigh/renderer/InlineCodeStyleTest.kt`
+- Modify: preview 模块引用点（grep `measureInlineCodeSize|InlineCodeSize|widthDp|heightDp` 定位。
+- Modify: `codehighlight-render/src/commonTest/kotlin/com/hrm/codehigh/renderer/InlineCodeStyleTest.kt`
 
 - [ ] **Step 1: Strings 鍙敞鍏?*
 
-`Strings.kt` 閲嶅啓锛?
+`Strings.kt` 重写：
 ```kotlin
 package com.hrm.codehigh.i18n
 
 /**
- * 浠ｇ爜鍧楀唴缃枃妗堬紙鏀惰捣/灞曞紑/澶嶅埗绛夛級娉ㄥ叆鎺ュ彛銆? * 瀹夸富鍙疄鐜板悗閫氳繃 [LocalCodeBlockStrings] 瑕嗙洊榛樿鏂囨銆? */
+ * 代码块内置文案（收起/展开/复制等）注入接口。 * 宿主可实现后通过 [LocalCodeBlockStrings] 覆盖默认文案。 */
 fun interface CodeBlockStrings {
     fun collapse(): String
     fun expand(hiddenLines: Int): String
@@ -1122,7 +1136,7 @@ fun interface CodeBlockStrings {
     fun copied(): String
 }
 
-/** 榛樿鏂囨锛氳窡闅忕郴缁熻瑷€锛堜腑鏂?鑻辨枃锛夛紝璇█妫€娴嬪湪杩涚▼鍐呬粎鎵ц涓€娆?*/
+/** 默认文案：跟随系统语言（中、英文），语言检测在进程内仅执行一次*/
 internal object DefaultCodeBlockStrings : CodeBlockStrings {
     private val languageCode: String by lazy {
         try {
@@ -1138,60 +1152,60 @@ internal object DefaultCodeBlockStrings : CodeBlockStrings {
         val n = maxOf(0, hiddenLines)
         return if (isChinese) "鈻?灞曞紑 ($n 琛?" else "鈻?Expand ($n ${if (n == 1) "line" else "lines"})"
     }
-    override fun copy(): String = if (isChinese) "澶嶅埗" else "Copy"
+    override fun copy(): String = if (isChinese) "复制" else "Copy"
     override fun copied(): String = if (isChinese) "宸插鍒? else "Copied"
 }
 
-/** 骞冲彴璇█鏍囩锛圔CP-47锛屽 zh-Hans-CN锛夛紝浠呭彇涓诲瓙鏍囩鍋氳瑷€鍒ゆ柇 */
+/** 平台语言标签（BCP-47，如 zh-Hans-CN），仅取主子标签做语言判断 */
 internal expect fun platformLanguageTag(): String
 ```
 
-锛堝垹闄?LocaleInfo銆乴ineNumber() 姝讳唬鐮佷笌鏃?Strings object銆傦級
-鏂版枃浠讹細
+（删除LocaleInfo、lineNumber() 死代码与旧Strings object。）
+新文件：
 
 ```kotlin
 package com.hrm.codehigh.i18n
 
 import androidx.compose.runtime.compositionLocalOf
 
-/** 瀹夸富娉ㄥ叆鑷畾涔変唬鐮佸潡鏂囨鐨勫叆鍙?*/
+/** 宿主注入自定义代码块文案的入口*/
 val LocalCodeBlockStrings = compositionLocalOf<CodeBlockStrings> { DefaultCodeBlockStrings }
 ```
 
-5 涓?PlatformLocale.kt actual 鍏ㄩ儴鏇挎崲涓猴細
+5 个PlatformLocale.kt actual 全部替换为：
 
 ```kotlin
 package com.hrm.codehigh.i18n
-// jvmMain / androidMain锛?internal actual fun platformLanguageTag(): String = java.util.Locale.getDefault().toLanguageTag()
+// jvmMain / androidMain: internal actual fun platformLanguageTag(): String = java.util.Locale.getDefault().toLanguageTag()
 ```
 
 ```kotlin
-// jsMain锛?package com.hrm.codehigh.i18n
+// jsMain:package com.hrm.codehigh.i18n
 internal actual fun platformLanguageTag(): String = js("navigator.language || 'en'") as String? ?: "en"
 ```
 
 ```kotlin
-// wasmJsMain锛?package com.hrm.codehigh.i18n
+// wasmJsMain:package com.hrm.codehigh.i18n
 import kotlinx.browser.window
 internal actual fun platformLanguageTag(): String = window.navigator.language
 ```
 
 ```kotlin
-// iosMain锛?package com.hrm.codehigh.i18n
+// iosMain:package com.hrm.codehigh.i18n
 import platform.Foundation.NSBundle
 import platform.Foundation.NSLocale
 import platform.Foundation.currentLocale
 import platform.Foundation.languageCode
 import platform.Foundation.preferredLocalizations
 internal actual fun platformLanguageTag(): String {
-    // 浼樺厛 App 绾ч閫夋湰鍦板寲锛屽洖閫€绯荤粺鍖哄煙
+    // 优先 App 级首选本地化，回退系统区域
     val preferred = NSBundle.mainBundle.preferredLocalizations.firstOrNull() as? String
     return preferred ?: NSLocale.currentLocale.languageCode ?: "en"
 }
 ```
 
-CodeBlock 鍐咃細`val strings = LocalCodeBlockStrings.current`锛屾姌鍙犳寜閽?`Strings.collapse()`鈫抈strings.collapse()` 绛夛紱CopyButton 澧炲姞 `strings: CodeBlockStrings` 鍙傛暟銆俲s 鐨?`as String?` 鍐欐硶鑻ョ紪璇戝櫒鎶ラ敊锛坖s() 杩斿洖鍔ㄦ€佺被鍨嬶級锛屾敼涓?`js("window.navigator.language || 'en'") as String`锛堣窡闅忕紪璇戝櫒鎻愮ず锛屼袱鑰呮嫨涓€缂栬瘧閫氳繃鑰咃級銆?
-- [ ] **Step 2: StreamingCursor 鍔ㄧ敾涓嬫矇 + 楂樺害鑷€傚簲**
+CodeBlock 内：`val strings = LocalCodeBlockStrings.current`，折叠按钮`Strings.collapse()`→`strings.collapse()` 等；CopyButton 增加 `strings: CodeBlockStrings` 参数。js 的`as String?` 写法若编译器报错（js() 返回动态类型），改为`js("window.navigator.language || 'en'") as String`（跟随编译器提示，两者择一编译通过者）。
+- [ ] **Step 2: StreamingCursor 动画下沉 + 高度自适应**
 
 ```kotlin
 @Composable
@@ -1212,20 +1226,20 @@ internal fun StreamingCursor(
         modifier = modifier
             .width(2.dp)
             .height(cursorHeight)
-            .graphicsLayer { this.alpha = alpha } // draw 闃舵璇诲€硷紝閬垮厤姣忓抚閲嶇粍
+            .graphicsLayer { this.alpha = alpha } // draw 阶段读值，避免每帧重组
             .background(color)
     )
 }
 ```
 
-import 鍙樻洿锛?`androidx.compose.ui.graphics.graphicsLayer`銆乣androidx.compose.ui.unit.Dp`锛沗color.copy(alpha=...)` 鏀逛负绾?`color`銆侰odeBlock 璋冪敤澶勪紶 `cursorHeight = codeLineHeightDp * 0.8f`銆?
-- [ ] **Step 3: InlineCodeSize 鍗曚綅鏄庣‘锛堢牬鍧忔€ч噸鍛藉悕锛?*
+import 变更：`androidx.compose.ui.graphics.graphicsLayer`、`androidx.compose.ui.unit.Dp`；`color.copy(alpha=...)` 改为：`color`。CodeBlock 调用处传 `cursorHeight = codeLineHeightDp * 0.8f`。
+- [ ] **Step 3: InlineCodeSize 单位明确（破坏性重命名）*
 
 ```kotlin
 data class InlineCodeSize(
-    /** 瀹藉害锛堝儚绱狅級 */
+    /** 宽度（像素） */
     val widthPx: Float,
-    /** 楂樺害锛堝儚绱狅級 */
+    /** 高度（像素） */
     val heightPx: Float,
 ) {
     fun width(density: Density): Dp = with(density) { widthPx.toDp() }
@@ -1233,10 +1247,10 @@ data class InlineCodeSize(
 }
 ```
 
-`measureInlineCodeSize` 鐨?`maxWidth` 鍙傛暟閲嶅懡鍚?`maxWidthPx: Float = Float.POSITIVE_INFINITY`锛孠Doc 娉ㄦ槑鍍忕礌鍗曚綅銆俫rep 鍏ㄤ粨搴?`widthDp(|heightDp(|InlineCodeSize(|measureInlineCodeSize(` 鏇存柊璋冪敤鐐癸紙preview 妯″潡鍐咃級锛宍x.widthDp(density)` 鈫?`x.width(density)`銆?
-- [ ] **Step 4: InlineCodeStyleTest 鏀圭浉瀵规柇瑷€**
+`measureInlineCodeSize` 的`maxWidth` 参数重命名`maxWidthPx: Float = Float.POSITIVE_INFINITY`，KDoc 注明像素单位。grep 全仓库`widthDp(|heightDp(|InlineCodeSize(|measureInlineCodeSize(` 更新调用点（preview 模块内），`x.widthDp(density)` →`x.width(density)`。
+- [ ] **Step 4: InlineCodeStyleTest 改相对断言**
 
-鍒犻櫎甯搁噺鍥炲０鏂█锛屾敼鍐欎负锛?
+删除常量回声断言，改写为：
 ```kotlin
     @Test
     fun should_adaptColors_when_themeBrightnessDiffers() {
@@ -1251,24 +1265,24 @@ data class InlineCodeSize(
     private fun InlineCodeStyle.isDarkStyle() = theme.isDark
 ```
 
-锛堜繚鐣欏師绗?1銆? 鐢ㄤ緥涓?theme 娲剧敓"鏂█锛歵extStyle.color == theme.colorFor(PLAIN)锛沠ontSize/lineHeight 閿氱偣 13.sp/20.sp 淇濈暀銆傦級import assertNotEquals/assertTrue銆?
-- [ ] **Step 5: REGRESS + preview 缂栬瘧閫氳繃**
+（保留原第1个 用例的theme 派生"断言：textStyle.color == theme.colorFor(PLAIN)；fontSize/lineHeight 锚点 13.sp/20.sp 保留。）import assertNotEquals/assertTrue。
+- [ ] **Step 5: REGRESS + preview 编译通过**
 
-- [ ] **Step 6: Commit** `feat: 鏂囨鍙敞鍏ヤ笌骞冲彴璇█鏍囩绠€鍖栵紱鍏夋爣鍔ㄧ敾涓嬫矇 draw 灞傦紱娴嬮噺 API 鍗曚綅鏄惧紡鍖朻
+- [ ] **Step 6: Commit** `feat: 文案可注入与平台语言标签简化；光标动画下沉 draw 层；测量 API 单位显式化`
 
 ---
 
-### Task 12: 鏋勫缓宸ョ▼鏀舵暃
+### Task 12: 构建工程收敛
 
 **Files:**
 - Modify: 鏍?`build.gradle.kts`銆乣codehighlight-parser/build.gradle.kts`銆乣codehighlight-render/build.gradle.kts`銆乣gradle/libs.versions.toml`銆乣gradle.properties`
 
-- [ ] **Step 1: 鐗堟湰鍏?version catalog锛?.0.0锛?*
+- [ ] **Step 1: 版本收敛version catalog，2.0.0**
 
-`libs.versions.toml` `[versions]` 杩藉姞 `codehigh = "2.0.0"`锛沗gradle.properties` 鍒犻櫎 `VERSION=1.1.2`锛涗袱涓簱妯″潡 `rootProject.property("VERSION").toString()` 鈫?`libs.versions.codehigh.get()`銆?
-- [ ] **Step 2: POM 鍏叡鍧楁敹鏁涘埌鏍规瀯寤?*
+`libs.versions.toml` `[versions]` 追加 `codehigh = "2.0.0"`；`gradle.properties` 删除 `VERSION=1.1.2`；两个库模块 `rootProject.property("VERSION").toString()` ；`libs.versions.codehigh.get()`。
+- [ ] **Step 2: POM 公共块收敛到根构建*
 
-鏍?`build.gradle.kts` 杩藉姞锛?
+根`build.gradle.kts` 追加：
 ```kotlin
 import com.vanniktech.maven.publish.MavenPublishBaseExtension
 
@@ -1305,26 +1319,26 @@ subprojects {
 }
 ```
 
-涓や釜搴撴ā鍧楃殑 mavenPublishing 鍧楀垹鑷充粎鍓?`coordinates(...)` + `pom { name.set / description.set }`锛坈oordinates 鐢?Step 1 鐨?toml 寮曠敤锛夈€?
-- [ ] **Step 3: 搴撴ā鍧楀幓闄ゅ簲鐢ㄧ骇浜х墿**
+两个库模块的 mavenPublishing 块删至仅留`coordinates(...)` + `pom { name.set / description.set }`（coordinates 、Step 1 （toml 引用）。
+- [ ] **Step 3: 库模块去除应用级产物**
 
-parser/render 涓ゆā鍧楀垹闄わ細iOS `binaries.framework { ... }` 鏁村潡锛?6-44 / 36-44 鍖哄煙锛変笌 js/wasmJs 鐨?`binaries.executable()`锛堝叡 4 澶勶級銆俻review/composeApp 涓嶅姩锛堝彲杩愯 demo 闇€瑕侊級銆?
+parser/render 两模块删除：iOS `binaries.framework { ... }` 整块（6-44 / 36-44 区域）与 js/wasmJs 与`binaries.executable()`（共 4 处）。preview/composeApp 不动（可运行 demo 需要）。
 - [ ] **Step 4: explicitApiWarning**
 
-涓や釜搴撴ā鍧?`kotlin {` 鍧楅琛屽姞 `explicitApiWarning()`锛堟笎杩涜縼绉伙細鏂版敼鍔ㄥ嵆鏃舵姤閿欐彁閱掞紝瀛橀噺涓嶇牬鍧忔瀯寤猴級銆?
-- [ ] **Step 5: 楠岃瘉**
+两个库模块`kotlin {` 块首行加 `explicitApiWarning()`（渐进迁移：新改动即时报错提醒，存量不破坏构建）。
+- [ ] **Step 5: 验证**
 
-`.\gradlew.bat :codehighlight-parser:assemble :codehighlight-render:assemble --console=plain`锛堢‘璁?POM/鍧愭爣閰嶇疆鍚堟硶銆乧onfiguration-cache 涓嶆姤閿欙級銆?
-- [ ] **Step 6: Commit** `chore: 鐗堟湰鏀舵暃 version catalog锛?.0.0锛夈€丳OM 鍏叡鍧椾笂绉汇€佸簱妯″潡鍘诲簲鐢ㄤ骇鐗┿€佸紑鍚?explicitApiWarning`
+`.\gradlew.bat :codehighlight-parser:assemble :codehighlight-render:assemble --console=plain`（确认POM/坐标配置合法、configuration-cache 不报错）。
+- [ ] **Step 6: Commit** `chore: 版本收敛 version catalog，2.0.0）、POM 公共块上移、库模块去应用产物、开启explicitApiWarning`
 
 ---
 
-### Task 13: CI + 鏂囨。淇 + 鐑熷洷娴嬭瘯
+### Task 13: CI + 文档修正 + 烟囱测试
 
 **Files:**
 - Create: `.github/workflows/ci.yml`
-- Modify: `HIGHLIGHTER_COVERAGE_ANALYSIS.md`銆乣README.md`
-- Create: `codehighlight-preview/src/commonTest/kotlin/com/hrm/codehigh/preview/SampleCodeSmokeTest.kt`锛堢洰褰曚笉瀛樺湪鍒欏垱寤猴紝preview build.gradle.kts 闇€纭 commonTest 渚濊禆 kotlin-test锛岃嫢鏃犲垯琛?`sourceSets { commonTest.dependencies { implementation(libs.kotlin.test) } }`锛?- Delete: `composeApp/src/commonTest/kotlin/com/hrm/codehigh/ComposeAppCommonTest.kt`
+- Modify: `HIGHLIGHTER_COVERAGE_ANALYSIS.md`、`README.md`
+- Create: `codehighlight-preview/src/commonTest/kotlin/com/hrm/codehigh/preview/SampleCodeSmokeTest.kt`（目录不存在则创建，preview build.gradle.kts 需确认 commonTest 依赖 kotlin-test，若无则补`sourceSets { commonTest.dependencies { implementation(libs.kotlin.test) } }`。- Delete: `composeApp/src/commonTest/kotlin/com/hrm/codehigh/ComposeAppCommonTest.kt`
 
 - [ ] **Step 1: CI 宸ヤ綔娴?*
 
@@ -1369,8 +1383,8 @@ jobs:
         run: ./gradlew :composeApp:linkDebugFrameworkIosSimulatorArm64 --console=plain
 ```
 
-鏈湴楠岃瘉浠诲姟鍚嶅瓨鍦細`.\gradlew.bat :codehighlight-parser:tasks --all | Select-String "iosSimulatorArm64Test|jsBrowserTest|wasmJsBrowserTest"`锛坕OS 浠诲姟鏈湴 Windows 涓嶅彲鎵ц锛屼粎纭浠诲姟鍚嶅瓨鍦ㄤ簬浠诲姟鍒楄〃鈥斺€斾笉瀛樺湪鍒欐敼鐢?`:codehighlight-parser:compileKotlinIosSimulatorArm64` 绛夌紪璇戜换鍔★級銆?
-- [ ] **Step 2: preview 鐑熷洷娴嬭瘯**
+本地验证任务名存在：`.\gradlew.bat :codehighlight-parser:tasks --all | Select-String "iosSimulatorArm64Test|jsBrowserTest|wasmJsBrowserTest"`（iOS 任务本地 Windows 不可执行，仅确认任务名存在于任务列表——不存在则改为`:codehighlight-parser:compileKotlinIosSimulatorArm64` 等编译任务）。
+- [ ] **Step 2: preview 烟囱测试**
 
 ```kotlin
 package com.hrm.codehigh.preview
@@ -1380,44 +1394,49 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/** 鍏ㄩ儴棰勮鏍蜂緥鍙瀵瑰簲璇嶆硶鍣ㄥ畬鏁磋В鏋愶紙瀛楃鍏ㄨ鐩栦笉鍙樺紡锛?*/
+/** 全部预览样例可被对应词法器完整解析（字符全覆盖不变式。*/
 class SampleCodeSmokeTest {
     @Test
     fun should_tokenizeAllSamples_withFullCoverage() {
         val samples: List<Pair<String, String>> = listOf(
             "kotlin" to SampleCode.kotlin,
             "python" to SampleCode.python,
-            // 鍏朵綑 26 涓瑷€甯搁噺閫愪竴鍔犲叆锛堟墦寮€ SampleCode.kt 鎸夊父閲忓悕琛ュ叏锛?        )
-        assertTrue(samples.size >= 28, "搴旇鐩栧叏閮ㄩ瑙堟牱渚?)
+            // 其余 26 个语言常量逐一加入（打开 SampleCode.kt 按常量名补全。        )
+        assertTrue(samples.size >= 28, "应覆盖全部预览样例")
         for ((lang, code) in samples) {
             val tokens = LanguageRegistry.getOrPlain(lang).tokenize(code)
-            assertEquals(code, tokens.joinToString("") { it.text }, "lang=$lang 瀛楃鍏ㄨ鐩栫牬鍧?)
+            assertEquals(code, tokens.joinToString("") { it.text }, "lang=$lang 字符全覆盖破坏")
         }
     }
 }
 ```
 
-锛堟墽琛屾椂鎵撳紑 `codehighlight-preview/src/commonMain/kotlin/com/hrm/codehigh/preview/data/SampleCode.kt`锛屾寜瀹為檯甯搁噺鍚嶈ˉ鍏?28 椤规竻鍗曪紱鑻ヤ釜鍒父閲忓悕闈炶瑷€鍚嶏紝鐢ㄦ敞閲婃爣娉ㄦ槧灏勩€傦級鍒犻櫎 composeApp 鍗犱綅娴嬭瘯鏂囦欢銆?
-- [ ] **Step 3: 鏂囨。淇**
+（执行时打开 `codehighlight-preview/src/commonMain/kotlin/com/hrm/codehigh/preview/data/SampleCode.kt`，按实际常量名补全28 项清单；若个别常量名非语言名，用注释标注映射。）删除 composeApp 占位测试文件。
+- [ ] **Step 3: 文档修正**
 
-HIGHLIGHTER_COVERAGE_ANALYSIS.md锛堟寜琛屽彿瀹氫綅锛岄€愰」鏇存锛夛細
-- :366 `IncrementalHighlighter` 鎻忚堪 internal 鈫?`public`锛?parser 灞傛祦寮忚В鏋愭帴鍙ｏ紝鍏紑"锛夛紱
-- :373 鍒犻櫎 `AstDiffEngine锛坕nternal锛塦 鏉＄洰锛堝叏浠撳簱涓嶅瓨鍦級锛?- :35 `CodeAst` internal 鈫?public锛?- :461-466 鍓创鏉挎弿杩版敼涓?鍩轰簬 Compose `LocalClipboard`/`ClipEntry`锛圱10 杩佺Щ鍚庣幇鐘讹級"锛?- :486-489 娴嬭瘯娓呭崟鏀逛负鐪熷疄鏂囦欢锛坧arser锛欿otlinLexerTest銆丒scapeBoundsTest銆丩exerContractTest銆丩anguageCoverageTest銆丒xtendedLanguageSupportTest銆両ncrementalHighlighterTest锛況ender锛欳odeLineRenderTest銆丠ighlightedStringTest銆両nlineCodeStyleTest銆丆odeThemeTest锛沺review锛歋ampleCodeSmokeTest锛夛紝鍒犻櫎"Java/Python 绛夊悇璇█璇嶆硶鍒嗘瀽鍣ㄥ崟鍏冩祴璇?鐨勮櫄鏋勮〃杩帮紱
-- :489/:523 `:code-high:jvmTest` 鈫?`:codehighlight-parser:jvmTest`锛?- :538 渚濊禆鍥句负 parser 鈫?render 鈫?preview 鈫?composeApp/androidApp 涓夊眰缁撴瀯锛?- :423/:443 "18 绉嶈瑷€" 鈫?"28 绉嶈瑷€"銆?
-README.md锛?- 寰界珷锛欿otlin `2.3.20`銆丆MP `1.10.3`銆乵inSdk 寰界珷閾炬帴 `api?level=23`锛?- grep `CodeToken(|InlineCodeSize(|maxVisibleLines` 鍚屾 2.0.0 API 鍙樻洿绀轰緥锛圕odeToken 鏋勯€犵涓夊弬涓?source銆乵axVisibleLines 榛樿 500銆両nlineCodeSize 瀛楁 widthPx/heightPx锛夛紱
-- 娴嬭瘯鍛戒护绔犺妭纭 `./gradlew test` 琛ㄨ堪涓庢ā鍧楀悕涓€鑷淬€?
-- [ ] **Step 4: 楠岃瘉** `.\gradlew.bat :codehighlight-preview:jvmTest --console=plain`
+HIGHLIGHTER_COVERAGE_ANALYSIS.md（按行号定位，逐项更正）：
+- :366 `IncrementalHighlighter` 描述 internal →`public`，parser 层流式解析接口，公开"）；
+- :373 删除 `AstDiffEngine（internal）` 条目（全仓库不存在）。- :35 `CodeAst` internal →public，- :461-466 剪贴板描述改为基于 Compose `LocalClipboard`/`ClipEntry`（T10 迁移后现状）"。- :486-489 测试清单改为真实文件（parser：KotlinLexerTest、EscapeBoundsTest、LexerContractTest、LanguageCoverageTest、ExtendedLanguageSupportTest、IncrementalHighlighterTest；render：CodeLineRenderTest、HighlightedStringTest、InlineCodeStyleTest、CodeThemeTest；preview：SampleCodeSmokeTest），删除"Java/Python 等各语言词法分析器单元测试的虚构表述；
+- :489/:523 `:code-high:jvmTest` →`:codehighlight-parser:jvmTest`。
+- :538 依赖图为 parser →render →preview →composeApp/androidApp 三层结构。
+- :423/:443 "18 种语言" →"28 种语言"。
+README.md，- 徽章：Kotlin `2.3.20`、CMP `1.10.3`、minSdk 徽章链接 `api?level=23`，- grep `CodeToken(|InlineCodeSize(|maxVisibleLines` 同步 2.0.0 API 变更示例（CodeToken 构造第三参数source、maxVisibleLines 默认 500、InlineCodeSize 字段 widthPx/heightPx）；
+- 测试命令章节确认 `./gradlew test` 表述与模块名一致。
+- [ ] **Step 4: 验证** `.\gradlew.bat :codehighlight-preview:jvmTest --console=plain`
 
-- [ ] **Step 5: Commit** `ci: 澧炲姞 PR/push 娴嬭瘯娴佹按绾匡紱淇鏂囨。涓庝唬鐮佷笉绗︼紱preview 鏍蜂緥鐑熷洷娴嬭瘯`
+- [ ] **Step 5: Commit** `ci: 增加 PR/push 测试流水线；修正文档与代码不符；preview 样例烟囱测试`
 
 ---
 
-### Task 14: 缁堥獙
+### Task 14: 终验
 
-- [ ] **Step 1: 鍏ㄩ噺 JVM 娴嬭瘯** `.\gradlew.bat jvmTest --console=plain`锛堝叏妯″潡锛? 澶辫触锛?- [ ] **Step 2: 鍏?target 缂栬瘧** `.\gradlew.bat :codehighlight-parser:assemble :codehighlight-render:assemble :composeApp:assemble :androidApp:assembleDebug --console=plain`
-- [ ] **Step 3: 鏄庣‘宸茬煡闄愬埗骞跺啓鍏?README锛堢畝鐭竴鑺傦級**锛氭墜鍐?澹版槑寮忚瘝娉曞櫒鍙岃建骞跺瓨锛堝悗缁敹鏁涙柟鍚戯級锛汣odeBlock 鍐呴儴浠嶄负闈炴噿鍔犺浇 Column锛堝凡閫氳繃榛樿 500 琛屼笂闄?+ 鎶樺彔鎺у埗鎴愭湰锛孡azyColumn 鐣欏緟涓撻」锛夈€?- [ ] **Step 4: 缁堥獙 Commit锛堝鏈夐仐婕忓井璋冿級** + 姹囨€绘姤鍛婏紙淇娓呭崟 vs 璇勫鏉＄洰瀵圭収锛?
+- [ ] **Step 1: 全量 JVM 测试** `.\gradlew.bat jvmTest --console=plain`（全模块， 失败；
+- [ ] **Step 2: 全target 编译** `.\gradlew.bat :codehighlight-parser:assemble :codehighlight-render:assemble :composeApp:assemble :androidApp:assembleDebug --console=plain`
+- [ ] **Step 3: 明确已知限制并写入README（简短一节）**：手写声明式词法器双轨并存（后续收敛方向）；CodeBlock 内部仍为非懒加载 Column（已通过默认 500 行上限+ 折叠控制成本，LazyColumn 留待专项）。
+- [ ] **Step 4: 终验 Commit（如有遗漏微调）** + 汇总报告（修复清单 vs 评审条目对照。
 ---
 
-## 鑷煡璁板綍
+## 自查记录
 
-- 瑕嗙洊瀵圭収锛氳瘎瀹?#1鈫扵2锛?2鈫扵3/T4锛?3鈫扵6锛?4鈫扵3/T4/T5锛?5鈫扵3锛?6鈫扵1锛?7鈫扵4锛?8/#9鈫扵3锛?10鈫扵1锛?11锛堝弻杞ㄦ敹鏁涳級鈫掔敤鎴峰喅绛栬烦杩囷紱#12鈫扵4锛?13鈫扵3锛?14鈫扵3锛?15鈫扵5锛?16鈫扵3/T4锛?17鈫扵2锛?18鈫扵3锛?19鈫扵4锛坈ountLinesBefore 淇濈暀 O(n)锛屾潈琛¤褰曪級锛?20鈫扵10銆俽ender锛歋1鈫扵10锛汼2鈫扵10锛汼3鈫扵10锛堝紓姝?榛樿涓婇檺锛汱azyColumn 璺宠繃锛夛紱S4鈫扵8锛汼5鈫扵10锛汳1鈫扵10锛汳2鈫扵9锛汳3鈫扵8锛汳4鈫扵11锛汳5鈫扵11锛汳6鈫扵8锛汳7鈫扵10锛汳8鈫扵10锛汱1鈫扵11锛汱2鈫扵11锛汱3鈫扵11锛汱4鈫扵11锛汱5鈫扵11锛汱6鈫扵11锛汱7鈫扵9/T10銆傛瀯寤?娴嬭瘯锛?鈫扵13锛?鈫扵13锛?鈫扵7锛?鈫扵7锛?鈫扵4/T7锛?鈫扵12锛?/8鈫扵12锛?鈫扵12锛?0鈫扵1锛堟浠ｇ爜鍒犻櫎锛?T7锛?1/12鈫扵8锛?3鈫扵7锛?4鈫扵13锛?5/16鈫扵13銆?- 绫诲瀷涓€鑷存€э細CodeToken(type, range, source) 鍏ㄨ鍒掔粺涓€锛沀pdateResult -1 璇箟鍦?T4 瀹氫箟銆乀10 娑堣垂锛汣odeLineKind 鍦?T8 杩佺Щ鑷?theme 鍖咃紝T9/T10 寮曠敤涓€鑷淬€?
+- 覆盖对照：评审#1→T2；#2→T3/T4；#3→T6；#4→T3/T4/T5；#5→T3；#6→T1；#7→T4；#8/#9→T3；#10→T1；#11（双轨收敛）→用户决策跳过；#12→T4；#13→T3；#14→T3；#15→T5；#16→T3/T4；#17→T2；#18→T3；#19→T4（countLinesBefore 保留 O(n)，权衡记录）；#20→T10。render：S1→T10；S2→T10；S3→T10（异步，默认上限；LazyColumn 跳过）；S4→T8；S5→T10；M1→T10；M2→T9；M3→T8；M4→T11；M5→T11；M6→T8；M7→T10；M8→T10；L1→T11；L2→T11；L3→T11；L4→T11；L5→T11；L6→T11；L7→T9/T10。构建测试：#1→T13；#2→T13；#3→T7；#4→T7；#5→T4/T7；#6→T12；#7/8→T12；#9→T12；#10→T1（死代码删除，T7；#11/12→T8；#13→T7；#14→T13；#15/16→T13。
+- 类型一致性：CodeToken(type, range, source) 全计划统一；UpdateResult -1 语义在T4 定义、T10 消费；CodeLineKind 在T8 迁移至theme 包，T9/T10 引用一致。
