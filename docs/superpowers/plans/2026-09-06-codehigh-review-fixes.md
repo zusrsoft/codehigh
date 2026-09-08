@@ -14,8 +14,11 @@
 
 ### Task 1: CodeToken 惰性text 重构（破坏性API 变更）
 **Files:**
-- Modify: `codehighlight-parser/src/commonMain/kotlin/com/hrm/codehigh/ast/CodeToken.kt`（全文件替换）- Modify: 全部词法器构造点（见步骤 3 清单与替换规则）
-- Modify: `codehighlight-parser/src/commonMain/kotlin/com/hrm/codehigh/lexer/BaseLexer.kt`（删除死代码 TokenBuilder）- Modify: `codehighlight-render/src/commonMain/kotlin/com/hrm/codehigh/renderer/HighlightedString.kt:46-107`（删除死代码 buildLineRendersFromOffset/toRelativeTokens）- Modify: `codehighlight-render/src/commonTest/kotlin/com/hrm/codehigh/renderer/CodeLineRenderTest.kt`（构造点迁移）
+- Modify: `codehighlight-parser/src/commonMain/kotlin/com/hrm/codehigh/ast/CodeToken.kt`（全文件替换）
+- Modify: 全部词法器构造点（见步骤 3 清单与替换规则）
+- Modify: `codehighlight-parser/src/commonMain/kotlin/com/hrm/codehigh/lexer/BaseLexer.kt`（删除死代码 TokenBuilder）
+- Modify: `codehighlight-render/src/commonMain/kotlin/com/hrm/codehigh/renderer/HighlightedString.kt:46-107`（删除死代码 buildLineRendersFromOffset/toRelativeTokens）
+- Modify: `codehighlight-render/src/commonTest/kotlin/com/hrm/codehigh/renderer/CodeLineRenderTest.kt`（构造点迁移）
 - [ ] **Step 1: 重写 CodeToken.kt**
 
 ```kotlin
@@ -58,7 +61,7 @@ class CodeToken(
 3. `CodeToken(TokenType.PLAIN, c.toString(), pos until pos + 1)` → `CodeToken(TokenType.PLAIN, pos until pos + 1, code)`
 
 涉及文件（grep `CodeToken(` 验证无遗漏）：`lexer/` 目录全部 24 个.kt（KotlinLexer、PythonLexer、JavaLexer、JavaScriptLexer、TypeScriptLexer、GoLexer、RustLexer、SwiftLexer、CLexer、CssLexer、JsonLexer、YamlLexer、TomlLexer、SqlLexer、XmlLexer（含 HtmlLexer）、BashLexer、DiffLexer、DartLexer、ScalaLexer、LuaLexer、HaskellLexer、ElixirLexer、RLangLexer、PhpLexer）、`lexer/ConfigurableLexer.kt`、`lexer/BaseLexer.kt`（TokenBuilder 内部——该文件本任务将删除大部分）、`lexer/LanguageRegistry.kt` 无构造点、`stream/IncrementalHighlighter.kt:104-110`（dirtyTokens map——改为`CodeToken(token.type, (token.range.first + reparseStart)..(token.range.last + reparseStart), newCode)`，不再需要text 传递）。注意：各词法器文件内局部变量名可能是`code` 以外的名字（如`input`），替换时保持源变量名一致。
-- [ ] **Step 3: 删除死代码*
+- [ ] **Step 3: 删除死代码**
 
 `BaseLexer.kt` 全文件替换为：
 ```kotlin
@@ -84,7 +87,7 @@ internal abstract class BaseLexer : Lexer
 - Create: `codehighlight-parser/src/commonTest/kotlin/com/hrm/codehigh/lexer/EscapeBoundsTest.kt`
 - Modify: 14 个词法器文件的转义行（步骤2 清单）与 PLAIN 兜底分支
 - Modify: `codehighlight-parser/src/commonMain/kotlin/com/hrm/codehigh/lexer/BaseLexer.kt`（加 whitespaceEnd）
-- [ ] **Step 1: 先写崩溃回归测试（当前应失败）*
+- [ ] **Step 1: 先写崩溃回归测试（当前应失败）**
 
 ```kotlin
 package com.hrm.codehigh.lexer
@@ -132,7 +135,7 @@ class EscapeBoundsTest {
 ```
 
 运行 `.\gradlew.bat :codehighlight-parser:jvmTest --tests "com.hrm.codehigh.lexer.EscapeBoundsTest" --console=plain`，预期第一个用例抛 IndexOutOfBoundsException（FAIL），后两个FAIL。
-- [ ] **Step 2: 修复全部 22 处转义越界*
+- [ ] **Step 2: 修复全部 22 处转义越界**
 
 统一替换：`if (code[pos] == '\\') pos++` →`if (code[pos] == '\\' && pos + 1 < code.length) pos++`（KotlinLexer:90 带注释`// 跳过转义字符` 一并保留注释）。精确清单（文件行）：BashLexer:60,73；CLexer:146,159（CLexer:94 已安全不动）；CssLexer:54；GoLexer:72,85；JavaLexer:90,103；JavaScriptLexer:68,81,94；JsonLexer:25；KotlinLexer:90,103；PythonLexer:93,106,119；RustLexer:119,132,155；SwiftLexer:92；TypeScriptLexer:90,103,116；YamlLexer:72。（ConfigurableLexer:131 已安全不动）
 
@@ -150,7 +153,8 @@ class EscapeBoundsTest {
 
 14 个手写词法器（BashLexer:157、CLexer:228、CssLexer:168、GoLexer:160、JavaLexer:170、JavaScriptLexer:169、JsonLexer:77、KotlinLexer:177、PythonLexer:194、RustLexer:246、SwiftLexer:160、YamlLexer:141、TypeScriptLexer:186、SqlLexer:177）的 PLAIN 兜底。
 ```kotlin
-            // 其他字符：连续空白合并为单个 PLAIN，其余逐字符兜底            if (c.isWhitespace()) {
+            // 其他字符：连续空白合并为单个 PLAIN，其余逐字符兜底
+            if (c.isWhitespace()) {
                 val start = pos
                 pos = whitespaceEnd(code, pos)
                 tokens.add(CodeToken(TokenType.PLAIN, start until pos, code))
@@ -209,7 +213,8 @@ class EscapeBoundsTest {
 
 a) 多行注释支持嵌套（替换49-60 行分支）。
 ```kotlin
-            // 多行注释（Kotlin 支持嵌套。            if (pos + 1 < code.length && code[pos] == '/' && code[pos + 1] == '*') {
+            // 多行注释（Kotlin 支持嵌套）
+            if (pos + 1 < code.length && code[pos] == '/' && code[pos + 1] == '*') {
                 val start = pos
                 pos += 2
                 var depth = 1
@@ -399,7 +404,7 @@ class LexerContractTest {
 - Modify: `codehighlight-parser/src/commonMain/kotlin/com/hrm/codehigh/lexer/YamlLexer.kt`
 - Modify: `codehighlight-parser/src/commonMain/kotlin/com/hrm/codehigh/stream/IncrementalHighlighter.kt`
 - Modify: `codehighlight-parser/src/commonTest/kotlin/com/hrm/codehigh/stream/IncrementalHighlighterTest.kt`（追加用例，、T7 完成强化。
-- [ ] **Step 1: 先写假行首回归测试（追加至IncrementalHighlighterTest）*
+- [ ] **Step 1: 先写假行首回归测试（追加至 IncrementalHighlighterTest）**
 
 ```kotlin
     @Test
@@ -407,7 +412,8 @@ class LexerContractTest {
         val highlighter = IncrementalHighlighter()
         highlighter.update("a--", "yaml")
         val ast = highlighter.update("a---", "yaml")
-        // 行首敏感的--- 文档分隔符判定必须使用全文上下文，dirty 子串起始处不是行。        assertTrue(
+        // 行首敏感的 --- 文档分隔符判定必须使用全文上下文，dirty 子串起始处不是行。
+        assertTrue(
             ast.tokens.none { it.type == TokenType.KEYWORD && it.text == "---" },
             "增量重解析不应把子串起点误判为行首：tokens=${ast.tokens}"
         )
@@ -445,7 +451,7 @@ class LexerContractTest {
 ```
 
 运行增量测试，前两个用例预期 FAIL。
-- [ ] **Step 2: YamlLexer 支持行首上下文*
+- [ ] **Step 2: YamlLexer 支持行首上下文**
 
 将`tokenize(code: String)` 重命名为带偏移实现：
 
@@ -460,7 +466,7 @@ class LexerContractTest {
 同时（同文件）：
 - 转义修复已在 T2 完成；- `~` 死配置修复：在结构符号分支后新增分支。
 ```kotlin
-            // null 鍊?~
+            // null 值 ~
             if (c == '~') {
                 tokens.add(CodeToken(TokenType.BUILTIN, pos until pos + 1, code))
                 pos++
@@ -511,7 +517,8 @@ class IncrementalHighlighter {
         }
 
         val cached = cachedAst
-        // 长度短路，避免大字符串逐字符比较        if (cached != null && cached.source.length == code.length && cached.source == code) {
+        // 长度短路，避免大字符串逐字符比较
+        if (cached != null && cached.source.length == code.length && cached.source == code) {
             return UpdateResult(ast = cached, firstChangedLine = -1, reparseStart = -1)
         }
 
@@ -534,7 +541,8 @@ class IncrementalHighlighter {
         val appendedStart = oldAst.source.length
         val reparseStart = determineReparseStart(oldAst, appendedStart)
         val lexer = LanguageRegistry.getOrPlain(language)
-        // 按稳定Token 数取前缀视图，O(1) 无拷贝        val stableCount = oldAst.tokens.count { it.range.last < reparseStart }
+        // 按稳定 Token 数取前缀视图，O(1) 无拷贝
+        val stableCount = oldAst.tokens.count { it.range.last < reparseStart }
         val stable = oldAst.tokens.subList(0, stableCount)
 
         // startOffset 让词法器以全文视角判断行首等上下文；返回 range 仍相对子串。
@@ -561,7 +569,8 @@ class IncrementalHighlighter {
     private fun determineReparseStart(oldAst: CodeAst, appendedStart: Int): Int {
         if (appendedStart == 0) return 0
 
-        // 未闭合多行结构：不受回看窗口限制（否则长注释/长字符串导致每次全量重解析，流式累计 O(n²)。        val unfinishedTokenStart = oldAst.tokens
+        // 未闭合多行结构：不受回看窗口限制（否则长注释/长字符串导致每次全量重解析，流式累计 O(n²)）。
+        val unfinishedTokenStart = oldAst.tokens
             .asReversed()
             .firstOrNull { it.range.last < appendedStart && LanguageRegistry.getOrPlain(oldAst.language).isExtendableToken(it) }
             ?.range
@@ -593,7 +602,7 @@ private fun String.countLinesBefore(charIndex: Int): Int {
 ```
 
 注意：dirtyTokens 以`newCode` 为source，惰性text 直接从新文本切片。
-- [ ] **Step 4: REGRESS 通过（重点IncrementalHighlighterTest 全绿）*
+- [ ] **Step 4: REGRESS 通过（重点 IncrementalHighlighterTest 全绿）**
 
 - [ ] **Step 5: Commit** `fix: 增量引擎消费词法器上下文契约，修复假行首与长未闭合Token 的O(n²) 退化`
 
@@ -672,7 +681,7 @@ private fun String.countLinesBefore(charIndex: Int): Int {
 **Files:**
 - Modify: `codehighlight-parser/src/commonMain/kotlin/com/hrm/codehigh/lexer/LanguageRegistry.kt`
 
-- [ ] **Step 1: 饿汉初始化*
+- [ ] **Step 1: 饿汉初始化**
 
 删除 `defaultsRegistered`/`ensureDefaultsRegistered`，`init { registerDefaults() }`。注册完成后注册表仍可通过 `register()` 扩展（保持既有public 行为），但默认语言在类加载时一次写入（object 初始化由 JVM/Native 类加载机制保证线程安全；JS 单线程）。`registry`/`aliases` 保持 `internal` 可变 map（外部自定义语言注册是既有特性）。KDoc 注明：`register()` 非线程安全，建议在应用初始化阶段（单线程）调用。
 - [ ] **Step 2: REGRESS 通过**
@@ -742,24 +751,26 @@ class LanguageCoverageTest {
             assertEquals(
                 sample,
                 tokens.joinToString("") { it.text },
-                "lang=$lang 重构不变式破坏,
+                "lang=$lang 重构不变式破坏",
             )
         }
     }
 
     @Test
     fun should_haveCommentAndStringTokens_when_allLanguagesTokenized() {
-        // XML/Dockerfile/Bash/YAML/TOML/R/Diff 各自至少存在注释或元信息 Token；        // JSON 无注释，仅断言字符串        for ((lang, sample) in samples) {
+        // XML/Dockerfile/Bash/YAML/TOML/R/Diff 各自至少存在注释或元信息 Token
+        // JSON 无注释，仅断言字符串
+        for ((lang, sample) in samples) {
             val tokens = LanguageRegistry.getOrPlain(lang).tokenize(sample)
             if (lang != "json") {
                 assertTrue(
                     tokens.any { it.type == TokenType.COMMENT },
-                    "lang=$lang 应识别注释,
+                    "lang=$lang 应识别注释",
                 )
             }
             assertTrue(
                 tokens.any { it.type == TokenType.STRING || it.type == TokenType.COMMENT },
-                "lang=$lang 应识别字符串或注释,
+                "lang=$lang 应识别字符串或注释",
             )
         }
     }
@@ -776,7 +787,8 @@ class LanguageCoverageTest {
 
     @Test
     fun should_notThrow_when_unclosedConstructsAcrossLanguages() {
-        // 流式中间态：各类未闭合结构        val unclosed = listOf("/* ", "\"", "'", "\"\"\"", "#", "<a href=", "{ \"k\": ")
+        // 流式中间态：各类未闭合结构
+        val unclosed = listOf("/* ", "\"", "'", "\"\"\"", "#", "<a href=", "{ \"k\": ")
         for (lang in samples.keys) {
             for (snippet in unclosed) {
                 LanguageRegistry.getOrPlain(lang).tokenize(snippet) // 不抛异常即通过
@@ -848,7 +860,7 @@ enum class CodeLineKind {
 ```
 
 `backgroundForLine`（HighlightedString.kt:167-174 的internal 扩展）保持不动。
-- [ ] **Step 3: LocalCodeTheme 鏀?compositionLocalOf**
+- [ ] **Step 3: LocalCodeTheme 改用 compositionLocalOf**
 
 ```kotlin
 val LocalCodeTheme = compositionLocalOf<CodeTheme> { OneDarkProTheme }
@@ -987,7 +999,8 @@ class HighlightedStringTest {
         val s = buildHighlightedString(tokens, OneDarkProTheme)
         assertEquals(3, s.spanStyles.size)
         assertTrue(s.spanStyles.map { it.item }.distinct().size <= 2, "PLAIN 与IDENTIFIER 同色也应复用相等 SpanStyle")
-        // SpanStyle 鐩哥瓑鎬?        assertEquals(SpanStyle(color = OneDarkProTheme.colorFor(TokenType.PLAIN)), s.spanStyles[0].item)
+        // SpanStyle 相等性
+        assertEquals(SpanStyle(color = OneDarkProTheme.colorFor(TokenType.PLAIN)), s.spanStyles[0].item)
     }
 }
 ```
@@ -1005,7 +1018,8 @@ class HighlightedStringTest {
 - [ ] **Step 1: 入口归一化与记忆化（替换 71-94 行区域）**
 
 ```kotlin
-    // CRLF 归一化（Windows 剪贴板常见），并记忆化行拆分，流式高频重组下避免 O(n) 重分析    val normalizedCode = remember(code) { if (code.contains('\r')) code.replace("\r\n", "\n").replace("\r", "\n") else code }
+    // CRLF 归一化（Windows 剪贴板常见），并记忆化行拆分，流式高频重组下避免 O(n) 重分析
+    val normalizedCode = remember(code) { if (code.contains('\r')) code.replace("\r\n", "\n").replace("\r", "\n") else code }
     val lines = remember(normalizedCode) { normalizedCode.split("\n") }
     val totalLines = lines.size
     val isCollapsible = maxVisibleLines != null && totalLines > maxVisibleLines
@@ -1023,7 +1037,7 @@ class HighlightedStringTest {
     }
 ```
 
-- [ ] **Step 2: 异步解析 + 增量信息消费（替换visibleAst/lineHighlights 两段 remember）*
+- [ ] **Step 2: 异步解析 + 增量信息消费（替换 visibleAst/lineHighlights 两段 remember）**
 
 ```kotlin
     val highlighter = remember { IncrementalHighlighter() }
@@ -1102,7 +1116,7 @@ import：`androidx.compose.foundation.gestures.detectTapGestures`、`androidx.co
 ```
 
 - 剪贴板API 迁移：`LocalClipboardManager`/`clipboardManager.setText` 迁移至`val clipboard = LocalClipboard.current` + `clipboard.setClipEntry(ClipEntry(AnnotatedString(code)))`（compose.ui 1.9 多平台API）；若该构造方法在当前版本签名不同（编译器会指出），按提示改为等价形式（见`ClipEntry.of(...)`），保持删除两处 `@Suppress("DEPRECATION")`。import `androidx.compose.ui.platform.LocalClipboard`、`androidx.compose.ui.platform.ClipEntry`。
-- [ ] **Step 6: REGRESS 通过（render jvmTest + preview 相关编译）*
+- [ ] **Step 6: REGRESS 通过（render jvmTest + preview 相关编译）**
 
 `.\gradlew.bat :codehighlight-render:jvmTest :codehighlight-preview:compileKotlinJvm --console=plain`
 
@@ -1114,14 +1128,15 @@ import：`androidx.compose.foundation.gestures.detectTapGestures`、`androidx.co
 
 **Files:**
 - Modify: `codehighlight-render/src/commonMain/kotlin/com/hrm/codehigh/i18n/Strings.kt`
-- Modify/删除: `codehighlight-render/src/*Main/kotlin/com/hrm/codehigh/i18n/PlatformLocale.kt`（ 3 个actual）- Create: `codehighlight-render/src/commonMain/kotlin/com/hrm/codehigh/i18n/LocalCodeBlockStrings.kt`
+- Modify/删除: `codehighlight-render/src/*Main/kotlin/com/hrm/codehigh/i18n/PlatformLocale.kt`（3 个 `actual`）
+- Create: `codehighlight-render/src/commonMain/kotlin/com/hrm/codehigh/i18n/LocalCodeBlockStrings.kt`
 - Modify: `codehighlight-render/src/commonMain/kotlin/com/hrm/codehigh/renderer/CodeBlock.kt`（消费注入）
 - Modify: `codehighlight-render/src/commonMain/kotlin/com/hrm/codehigh/renderer/StreamingCursor.kt`
 - Modify: `codehighlight-render/src/commonMain/kotlin/com/hrm/codehigh/renderer/InlineCodeMeasurer.kt`
 - Modify: preview 模块引用点（grep `measureInlineCodeSize|InlineCodeSize|widthDp|heightDp` 定位。
 - Modify: `codehighlight-render/src/commonTest/kotlin/com/hrm/codehigh/renderer/InlineCodeStyleTest.kt`
 
-- [ ] **Step 1: Strings 鍙敞鍏?*
+- [ ] **Step 1: Strings 可注入**
 
 `Strings.kt` 重写：
 ```kotlin
@@ -1147,13 +1162,13 @@ internal object DefaultCodeBlockStrings : CodeBlockStrings {
     }
     private val isChinese: Boolean get() = languageCode.startsWith("zh")
 
-    override fun collapse(): String = if (isChinese) "鈻?鏀惰捣" else "鈻?Collapse"
+    override fun collapse(): String = if (isChinese) "▌ 收起" else "▌ Collapse"
     override fun expand(hiddenLines: Int): String {
         val n = maxOf(0, hiddenLines)
-        return if (isChinese) "鈻?灞曞紑 ($n 琛?" else "鈻?Expand ($n ${if (n == 1) "line" else "lines"})"
+        return if (isChinese) "▌ 展开 ($n 行)" else "▌ Expand ($n ${if (n == 1) "line" else "lines"})"
     }
     override fun copy(): String = if (isChinese) "复制" else "Copy"
-    override fun copied(): String = if (isChinese) "宸插鍒? else "Copied"
+    override fun copied(): String = if (isChinese) "已复制" else "Copied"
 }
 
 /** 平台语言标签（BCP-47，如 zh-Hans-CN），仅取主子标签做语言判断 */
@@ -1233,7 +1248,7 @@ internal fun StreamingCursor(
 ```
 
 import 变更：`androidx.compose.ui.graphics.graphicsLayer`、`androidx.compose.ui.unit.Dp`；`color.copy(alpha=...)` 改为：`color`。CodeBlock 调用处传 `cursorHeight = codeLineHeightDp * 0.8f`。
-- [ ] **Step 3: InlineCodeSize 单位明确（破坏性重命名）*
+- [ ] **Step 3: InlineCodeSize 单位明确（破坏性重命名）**
 
 ```kotlin
 data class InlineCodeSize(
@@ -1275,12 +1290,12 @@ data class InlineCodeSize(
 ### Task 12: 构建工程收敛
 
 **Files:**
-- Modify: 鏍?`build.gradle.kts`銆乣codehighlight-parser/build.gradle.kts`銆乣codehighlight-render/build.gradle.kts`銆乣gradle/libs.versions.toml`銆乣gradle.properties`
+- Modify: 根 `build.gradle.kts`、`codehighlight-parser/build.gradle.kts`、`codehighlight-render/build.gradle.kts`、`gradle/libs.versions.toml`、`gradle.properties`
 
 - [ ] **Step 1: 版本收敛version catalog，2.0.0**
 
-`libs.versions.toml` `[versions]` 追加 `codehigh = "2.0.0"`；`gradle.properties` 删除 `VERSION=1.1.2`；两个库模块 `rootProject.property("VERSION").toString()` ；`libs.versions.codehigh.get()`。
-- [ ] **Step 2: POM 公共块收敛到根构建*
+`libs.versions.toml` `[versions]` 追加 `codehigh = "2.0.0"`；`gradle.properties` 删除 `VERSION=1.1.2`；两个库模块 `rootProject.property("VERSION").toString()` 改为 `libs.versions.codehigh.get()`。
+- [ ] **Step 2: POM 公共块收敛到根构建**
 
 根`build.gradle.kts` 追加：
 ```kotlin
@@ -1319,7 +1334,7 @@ subprojects {
 }
 ```
 
-两个库模块的 mavenPublishing 块删至仅留`coordinates(...)` + `pom { name.set / description.set }`（coordinates 、Step 1 （toml 引用）。
+两个库模块的 mavenPublishing 块删至仅留 `coordinates(...)` + `pom { name.set / description.set }`（coordinates 用 Step 1 的 toml 引用）。
 - [ ] **Step 3: 库模块去除应用级产物**
 
 parser/render 两模块删除：iOS `binaries.framework { ... }` 整块（6-44 / 36-44 区域）与 js/wasmJs 与`binaries.executable()`（共 4 处）。preview/composeApp 不动（可运行 demo 需要）。
@@ -1329,7 +1344,7 @@ parser/render 两模块删除：iOS `binaries.framework { ... }` 整块（6-44 /
 - [ ] **Step 5: 验证**
 
 `.\gradlew.bat :codehighlight-parser:assemble :codehighlight-render:assemble --console=plain`（确认POM/坐标配置合法、configuration-cache 不报错）。
-- [ ] **Step 6: Commit** `chore: 版本收敛 version catalog，2.0.0）、POM 公共块上移、库模块去应用产物、开启explicitApiWarning`
+- [ ] **Step 6: Commit** `chore: 版本收敛 version catalog（2.0.0）、POM 公共块上移、库模块去应用产物、开启 explicitApiWarning`
 
 ---
 
@@ -1338,9 +1353,10 @@ parser/render 两模块删除：iOS `binaries.framework { ... }` 整块（6-44 /
 **Files:**
 - Create: `.github/workflows/ci.yml`
 - Modify: `HIGHLIGHTER_COVERAGE_ANALYSIS.md`、`README.md`
-- Create: `codehighlight-preview/src/commonTest/kotlin/com/hrm/codehigh/preview/SampleCodeSmokeTest.kt`（目录不存在则创建，preview build.gradle.kts 需确认 commonTest 依赖 kotlin-test，若无则补`sourceSets { commonTest.dependencies { implementation(libs.kotlin.test) } }`。- Delete: `composeApp/src/commonTest/kotlin/com/hrm/codehigh/ComposeAppCommonTest.kt`
+- Create: `codehighlight-preview/src/commonTest/kotlin/com/hrm/codehigh/preview/SampleCodeSmokeTest.kt`（目录不存在则创建，preview build.gradle.kts 需确认 commonTest 依赖 kotlin-test，若无则补 `sourceSets { commonTest.dependencies { implementation(libs.kotlin.test) } }`）。
+- Delete: `composeApp/src/commonTest/kotlin/com/hrm/codehigh/ComposeAppCommonTest.kt`
 
-- [ ] **Step 1: CI 宸ヤ綔娴?*
+- [ ] **Step 1: CI 工作流**
 
 ```yaml
 name: CI
@@ -1430,10 +1446,10 @@ README.md，- 徽章：Kotlin `2.3.20`、CMP `1.10.3`、minSdk 徽章链接 `api
 
 ### Task 14: 终验
 
-- [ ] **Step 1: 全量 JVM 测试** `.\gradlew.bat jvmTest --console=plain`（全模块， 失败；
+- [ ] **Step 1: 全量 JVM 测试** `.\gradlew.bat jvmTest --console=plain`（全模块，失败；
 - [ ] **Step 2: 全target 编译** `.\gradlew.bat :codehighlight-parser:assemble :codehighlight-render:assemble :composeApp:assemble :androidApp:assembleDebug --console=plain`
 - [ ] **Step 3: 明确已知限制并写入README（简短一节）**：手写声明式词法器双轨并存（后续收敛方向）；CodeBlock 内部仍为非懒加载 Column（已通过默认 500 行上限+ 折叠控制成本，LazyColumn 留待专项）。
-- [ ] **Step 4: 终验 Commit（如有遗漏微调）** + 汇总报告（修复清单 vs 评审条目对照。
+- [ ] **Step 4: 终验 Commit（如有遗漏微调）** + 汇总报告（修复清单 vs 评审条目对照）。
 ---
 
 ## 自查记录
