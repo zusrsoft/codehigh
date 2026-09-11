@@ -353,19 +353,6 @@ CodeBlock(
 - [Markdown](https://github.com/zusrsoft/Markdown) — 由同一作者开发的 Kotlin Multiplatform Markdown 解析与渲染库。如果你需要 Markdown 解析或渲染能力，请与 `codehigh` 搭配使用。
 - [LaTeX](https://github.com/zusrsoft/LaTeX) — 由同一作者开发的 Kotlin Multiplatform LaTeX 解析和渲染库。如果你的项目同时需要代码高亮和 LaTeX 渲染，不妨看看！
 
-## 📄 许可证
+## License
 
-本项目采用 MIT 许可证 - 有关详细信息，请参阅 [LICENSE](LICENSE) 文件。
-
-```
-MIT License
-
-Copyright (c) 2026 huarangmeng (original author)
-Copyright (c) 2026 zusrsoft (maintainer)
-
-特此免费授予任何获得本软件和相关文档文件（"软件"）副本的人不受限制地处理软件的权利，包括但不限于使用、复制、修改、合并、发布、分发、再许可和/或销售软件副本的权利，并允许向其提供软件的人这样做，符合以下条件：
-
-上述版权声明和本许可声明应包含在软件的所有副本或主要部分中。
-
-本软件按"原样"提供，不提供任何形式的明示或暗示保证，包括但不限于对适销性、特定用途适用性和非侵权性的保证。在任何情况下，作者或版权持有人均不对因软件或软件使用或其他交易引起的任何索赔、损害或其他责任承担责任，无论是合同诉讼、侵权诉讼还是其他形式的诉讼。
-```
+本项目基于 MIT License 授权发布 - 详见 [LICENSE](./LICENSE) 文件。
